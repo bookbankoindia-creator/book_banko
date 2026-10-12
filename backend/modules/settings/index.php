@@ -29,7 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'terms_conditions_url' => trim($_POST['terms_conditions_url'] ?? ''),
             'notice_title' => trim($_POST['notice_title'] ?? ''),
             'notice_message' => trim($_POST['notice_message'] ?? ''),
-            'default_jee_neet_text' => trim($_POST['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗')
+            'default_jee_neet_text' => trim($_POST['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗'),
+            'admob_enabled' => isset($_POST['admob_enabled']) ? '1' : '0',
+            'admob_app_id' => trim($_POST['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713'),
+            'admob_interstitial_ad_unit_id' => trim($_POST['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712')
         ];
 
         try {
@@ -148,6 +151,37 @@ include __DIR__ . '/../../includes/header.php';
                         <label class="form-label" for="default_jee_neet_text">Default Container Text (Page 4+ in Textbooks)</label>
                         <input type="text" class="form-control" id="default_jee_neet_text" name="default_jee_neet_text" value="<?= htmlspecialchars($current['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗') ?>" placeholder="👉 Click here for the best JEE & NEET Questions ↗">
                         <small class="text-muted">Global default text shown on the clickable bottom container for textbook PDFs from Page 4 onwards. Can also be overridden per individual chapter in the Chapter Editor.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Mobile Ads (AdMob) Settings -->
+            <div class="bb-card mb-4 border-primary">
+                <div class="bb-card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-badge-ad-fill text-primary me-2"></i>Google Mobile Ads (AdMob) Monetization</h5>
+                    <span class="badge bg-primary text-white">Full-Screen Ads</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-check form-switch p-3 bg-light rounded-3 border">
+                            <input class="form-check-input" type="checkbox" role="switch" id="admob_enabled" name="admob_enabled" value="1" <?= ($current['admob_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label fw-bold ms-2 text-dark" for="admob_enabled">
+                                Enable AdMob Interstitial Ads (When clicking JEE & NEET button)
+                            </label>
+                            <div class="text-muted small ms-2">Displays a full-screen Interstitial Ad when a student clicks "Click here for the best JEE & NEET Questions", then opens the questions link once the ad is closed.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" for="admob_app_id">AdMob App ID</label>
+                        <input type="text" class="form-control font-monospace" id="admob_app_id" name="admob_app_id" value="<?= htmlspecialchars($current['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713') ?>" placeholder="ca-app-pub-3940256099942544~3347511713">
+                        <small class="text-muted">Your Google AdMob Application ID. Default is Google Test App ID.</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" for="admob_interstitial_ad_unit_id">Interstitial Ad Unit ID</label>
+                        <input type="text" class="form-control font-monospace" id="admob_interstitial_ad_unit_id" name="admob_interstitial_ad_unit_id" value="<?= htmlspecialchars($current['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712') ?>" placeholder="ca-app-pub-3940256099942544/1033173712">
+                        <small class="text-muted">Your Interstitial Ad Unit ID. Default is Google Test Interstitial ID (<code>ca-app-pub-3940256099942544/1033173712</code>).</small>
                     </div>
                 </div>
             </div>

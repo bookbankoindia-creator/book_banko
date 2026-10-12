@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../models/app_state.dart';
 import '../models/data_models.dart';
+import '../services/ad_service.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
 
@@ -32,6 +33,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   void initState() {
     super.initState();
     _pdfViewerController = PdfViewerController();
+    AdService.instance.loadInterstitialAd();
   }
 
   @override
@@ -597,20 +599,25 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             final rawUri = details.uri.trim();
             final uri = Uri.tryParse(rawUri);
             if (uri != null) {
-              try {
-                final launched = await launchUrl(
-                  uri,
-                  mode: LaunchMode.externalApplication,
-                );
-                if (!launched) {
-                  await launchUrl(uri, mode: LaunchMode.platformDefault);
-                }
-              } catch (e) {
-                debugPrint('Hyperlink launch error: $e');
-                try {
-                  await launchUrl(uri, mode: LaunchMode.platformDefault);
-                } catch (_) {}
-              }
+              debugPrint('Hyperlink clicked: $rawUri -> Triggering AdMob Interstitial Ad');
+              AdService.instance.showInterstitialAd(
+                onDismissed: () async {
+                  try {
+                    final launched = await launchUrl(
+                      uri,
+                      mode: LaunchMode.externalApplication,
+                    );
+                    if (!launched) {
+                      await launchUrl(uri, mode: LaunchMode.platformDefault);
+                    }
+                  } catch (e) {
+                    debugPrint('Hyperlink launch error: $e');
+                    try {
+                      await launchUrl(uri, mode: LaunchMode.platformDefault);
+                    } catch (_) {}
+                  }
+                },
+              );
             }
           },
         ),

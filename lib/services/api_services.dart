@@ -342,6 +342,22 @@ class ApiService {
     }
     return [];
   }
+
+  // 8. Fetch App Config & AdMob settings dynamically
+  static Future<Map<String, dynamic>?> getAppConfig() async {
+    try {
+      final response = await _getWithFallback('get_app_config.php');
+      if (response != null && response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return Map<String, dynamic>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching app config from API: $e');
+    }
+    return null;
+  }
 }
 
 

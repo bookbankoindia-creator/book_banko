@@ -46,6 +46,9 @@ try {
             'message' => $settings['notice_message'] ?? ''
         ],
         'default_jee_neet_text' => $settings['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗',
+        'admob_enabled' => ($settings['admob_enabled'] ?? '1') === '1',
+        'admob_app_id' => $settings['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713',
+        'admob_interstitial_ad_unit_id' => $settings['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712',
         'banners' => $banners
     ];
 

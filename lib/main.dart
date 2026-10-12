@@ -16,8 +16,11 @@ import 'screens/extra_material_screen.dart';
 import 'screens/study_material_screen.dart';
 import 'screens/competitive_exams_screen.dart';
 import 'screens/higher_education_screen.dart';
+import 'services/ad_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AdService.instance.initialize();
   runApp(
     ChangeNotifierProvider(
       create: (_) => BookBankoAppState(),
