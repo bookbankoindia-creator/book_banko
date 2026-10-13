@@ -140,7 +140,7 @@ function uploadFile(array $file, string $targetDir, array $allowedExtensions = [
 
     // Determine bucket name
     $bucket = 'pdfs';
-    if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'])) {
+    if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg', 'mp4', 'webm'])) {
         if (str_contains($targetDir, 'banners')) {
             $bucket = 'banners';
         } elseif (str_contains($targetDir, 'products')) {
@@ -166,6 +166,10 @@ function uploadFile(array $file, string $targetDir, array $allowedExtensions = [
         $mimeType = 'image/webp';
     } elseif ($ext === 'svg') {
         $mimeType = 'image/svg+xml';
+    } elseif ($ext === 'mp4') {
+        $mimeType = 'video/mp4';
+    } elseif ($ext === 'webm') {
+        $mimeType = 'video/webm';
     } elseif (function_exists('mime_content_type') && !empty($file['tmp_name']) && file_exists($file['tmp_name'])) {
         $detected = @mime_content_type($file['tmp_name']);
         if ($detected) $mimeType = $detected;
