@@ -599,8 +599,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             final rawUri = details.uri.trim();
             final uri = Uri.tryParse(rawUri);
             if (uri != null) {
-              debugPrint('Hyperlink clicked: $rawUri -> Triggering AdMob Interstitial Ad');
-              AdService.instance.showInterstitialAd(
+              debugPrint('Hyperlink clicked: $rawUri -> Triggering Custom Ad');
+              AdService.instance.showCustomAd(
+                context,
+                destinationUrl: rawUri,
                 onDismissed: () async {
                   try {
                     final launched = await launchUrl(

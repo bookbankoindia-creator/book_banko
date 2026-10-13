@@ -46,9 +46,15 @@ try {
             'message' => $settings['notice_message'] ?? ''
         ],
         'default_jee_neet_text' => $settings['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗',
-        'admob_enabled' => ($settings['admob_enabled'] ?? '1') === '1',
-        'admob_app_id' => $settings['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713',
-        'admob_interstitial_ad_unit_id' => $settings['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712',
+        'custom_ad' => [
+            'enabled' => ($settings['custom_ad_enabled'] ?? '1') === '1',
+            'title' => $settings['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials',
+            'sub_title' => $settings['custom_ad_sub_title'] ?? 'Top question bank, chapter-wise test series & expert video solutions!',
+            'image_url' => !empty($settings['custom_ad_image']) ? resolveMediaUrl($settings['custom_ad_image'], 'banners') : '',
+            'target_url' => $settings['custom_ad_target_url'] ?? '',
+            'button_text' => $settings['custom_ad_button_text'] ?? 'Explore Questions Now 🚀',
+        ],
+        'admob_enabled' => false,
         'banners' => $banners
     ];
 

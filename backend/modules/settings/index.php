@@ -13,11 +13,31 @@ $pageTitle = 'App Settings & Config';
 $pageSubtitle = 'Configure global application parameters, versioning, notices, and maintenance mode';
 $db = Database::getConnection();
 
+// Fetch current settings
+$rows = $db->query("SELECT setting_key, setting_value FROM app_settings")->fetchAll();
+$current = [];
+foreach ($rows as $r) {
+    $current[$r['setting_key']] = $r['setting_value'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
     if (!verifyCSRFToken($csrf)) {
         flash('error', 'Invalid security token.');
     } else {
+        // Handle Custom Ad Image (File upload or direct URL)
+        $customAdImage = $current['custom_ad_image'] ?? '';
+        if (!empty($_FILES['custom_ad_image_file']['name'])) {
+            $uploadResult = uploadFile($_FILES['custom_ad_image_file'], BANNER_UPLOADS_PATH, ['jpg', 'jpeg', 'png', 'webp', 'gif'], 20);
+            if ($uploadResult['status']) {
+                $customAdImage = $uploadResult['filename'];
+            } else {
+                flash('warning', 'Ad image upload notice: ' . ($uploadResult['message'] ?? 'Failed to upload'));
+            }
+        } elseif (isset($_POST['custom_ad_image_url'])) {
+            $customAdImage = trim($_POST['custom_ad_image_url']);
+        }
+
         $settings = [
             'app_name' => trim($_POST['app_name'] ?? 'Book Banko'),
             'app_version' => trim($_POST['app_version'] ?? '1.0.0'),
@@ -30,9 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notice_title' => trim($_POST['notice_title'] ?? ''),
             'notice_message' => trim($_POST['notice_message'] ?? ''),
             'default_jee_neet_text' => trim($_POST['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗'),
-            'admob_enabled' => isset($_POST['admob_enabled']) ? '1' : '0',
-            'admob_app_id' => trim($_POST['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713'),
-            'admob_interstitial_ad_unit_id' => trim($_POST['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712')
+            'custom_ad_enabled' => isset($_POST['custom_ad_enabled']) ? '1' : '0',
+            'custom_ad_title' => trim($_POST['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials'),
+            'custom_ad_sub_title' => trim($_POST['custom_ad_sub_title'] ?? 'Top question bank, chapter-wise test series & expert video solutions!'),
+            'custom_ad_image' => $customAdImage,
+            'custom_ad_target_url' => trim($_POST['custom_ad_target_url'] ?? ''),
+            'custom_ad_button_text' => trim($_POST['custom_ad_button_text'] ?? 'Explore Questions Now 🚀'),
+            'admob_enabled' => '0'
         ];
 
         try {
@@ -51,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute($params);
             }
 
-            flash('success', 'Application settings saved successfully.');
+            flash('success', 'Application settings & Custom Ad configuration saved successfully.');
             header('Location: ' . url('modules/settings/index.php'));
             exit;
         } catch (PDOException $e) {
@@ -60,19 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all current settings
-$rows = $db->query("SELECT setting_key, setting_value FROM app_settings")->fetchAll();
-$current = [];
-foreach ($rows as $r) {
-    $current[$r['setting_key']] = $r['setting_value'];
-}
-
 include __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <form method="POST" action="">
+        <form method="POST" action="" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
 
             <!-- General App Config -->
@@ -155,33 +172,73 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
             </div>
 
-            <!-- Google Mobile Ads (AdMob) Settings -->
-            <div class="bb-card mb-4 border-primary">
-                <div class="bb-card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-badge-ad-fill text-primary me-2"></i>Google Mobile Ads (AdMob) Monetization</h5>
-                    <span class="badge bg-primary text-white">Full-Screen Ads</span>
+            <!-- Dynamic In-House Custom Ads (Self-Hosted Ads) -->
+            <div class="bb-card mb-4 border-success shadow-sm">
+                <div class="bb-card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="mb-0 text-success"><i class="bi bi-badge-ad-fill me-2"></i>In-House Custom Ad Management (Self-Hosted)</h5>
+                    <span class="badge bg-success text-white"><i class="bi bi-shield-check me-1"></i>100% Dynamic • No AdMob</span>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-12">
                         <div class="form-check form-switch p-3 bg-light rounded-3 border">
-                            <input class="form-check-input" type="checkbox" role="switch" id="admob_enabled" name="admob_enabled" value="1" <?= ($current['admob_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
-                            <label class="form-check-label fw-bold ms-2 text-dark" for="admob_enabled">
-                                Enable AdMob Interstitial Ads (When clicking JEE & NEET button)
+                            <input class="form-check-input" type="checkbox" role="switch" id="custom_ad_enabled" name="custom_ad_enabled" value="1" <?= ($current['custom_ad_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label fw-bold ms-2 text-dark" for="custom_ad_enabled">
+                                Enable Custom In-House Ad Popup (When students click JEE & NEET button in PDF)
                             </label>
-                            <div class="text-muted small ms-2">Displays a full-screen Interstitial Ad when a student clicks "Click here for the best JEE & NEET Questions", then opens the questions link once the ad is closed.</div>
+                            <div class="text-muted small ms-2">Displays your own custom full-screen promotional ad popup whenever a student clicks "Click here for the best JEE & NEET Questions" in the textbook reader.</div>
                         </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold" for="admob_app_id">AdMob App ID</label>
-                        <input type="text" class="form-control font-monospace" id="admob_app_id" name="admob_app_id" value="<?= htmlspecialchars($current['admob_app_id'] ?? 'ca-app-pub-3940256099942544~3347511713') ?>" placeholder="ca-app-pub-3940256099942544~3347511713">
-                        <small class="text-muted">Your Google AdMob Application ID. Default is Google Test App ID.</small>
+                        <label class="form-label fw-bold" for="custom_ad_title">Ad Title / Headline</label>
+                        <input type="text" class="form-control" id="custom_ad_title" name="custom_ad_title" value="<?= htmlspecialchars($current['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials') ?>" placeholder="e.g. Special JEE & NEET Rank Booster Course!">
+                        <small class="text-muted">Primary headline shown prominently at the top of the ad popup.</small>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold" for="admob_interstitial_ad_unit_id">Interstitial Ad Unit ID</label>
-                        <input type="text" class="form-control font-monospace" id="admob_interstitial_ad_unit_id" name="admob_interstitial_ad_unit_id" value="<?= htmlspecialchars($current['admob_interstitial_ad_unit_id'] ?? 'ca-app-pub-3940256099942544/1033173712') ?>" placeholder="ca-app-pub-3940256099942544/1033173712">
-                        <small class="text-muted">Your Interstitial Ad Unit ID. Default is Google Test Interstitial ID (<code>ca-app-pub-3940256099942544/1033173712</code>).</small>
+                        <label class="form-label fw-bold" for="custom_ad_button_text">Call to Action (CTA) Button Text</label>
+                        <input type="text" class="form-control" id="custom_ad_button_text" name="custom_ad_button_text" value="<?= htmlspecialchars($current['custom_ad_button_text'] ?? 'Explore Questions Now 🚀') ?>" placeholder="e.g. Explore Now 🚀, Join Telegram, Get Free Notes">
+                        <small class="text-muted">The text displayed on the main action button.</small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold" for="custom_ad_sub_title">Ad Description / Subtitle</label>
+                        <textarea class="form-control" id="custom_ad_sub_title" name="custom_ad_sub_title" rows="2" placeholder="e.g. Access 5000+ solved previous years questions, revision notes, chapter mock tests, and top faculty guidance."><?= htmlspecialchars($current['custom_ad_sub_title'] ?? 'Top question bank, chapter-wise test series & expert video solutions!') ?></textarea>
+                        <small class="text-muted">Short promotional description explaining the benefits or offer.</small>
+                    </div>
+
+                    <div class="col-md-7">
+                        <label class="form-label fw-bold" for="custom_ad_image_file">Upload Ad Banner Image</label>
+                        <input type="file" class="form-control" id="custom_ad_image_file" name="custom_ad_image_file" accept="image/png,image/jpeg,image/webp,image/gif">
+                        <small class="text-muted">Upload high-quality banner (recommended 16:9 or 4:3, e.g. 800x450 or 600x600). Allowed: JPG, PNG, WEBP.</small>
+
+                        <div class="mt-2">
+                            <label class="form-label small text-muted mb-1" for="custom_ad_image_url">Or Direct Image URL / Filename</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="custom_ad_image_url" name="custom_ad_image_url" value="<?= htmlspecialchars($current['custom_ad_image'] ?? '') ?>" placeholder="https://example.com/banner.png or uploads/banners/image.png">
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">Current Ad Banner Preview</label>
+                        <div class="p-2 border rounded bg-white text-center" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                            <?php if (!empty($current['custom_ad_image'])): ?>
+                                <img src="<?= htmlspecialchars(resolveMediaUrl($current['custom_ad_image'], 'banners')) ?>" alt="Ad Preview" class="img-fluid rounded shadow-sm" style="max-height: 140px; object-fit: contain;">
+                            <?php else: ?>
+                                <div class="text-muted small py-3">
+                                    <i class="bi bi-image display-6 d-block mb-1 text-secondary"></i>
+                                    No ad banner uploaded yet.<br>(A default gradient illustration will be shown in-app)
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold" for="custom_ad_target_url">Target Redirect URL (Website, Telegram, WhatsApp, Course, or Form)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                            <input type="url" class="form-control font-monospace" id="custom_ad_target_url" name="custom_ad_target_url" value="<?= htmlspecialchars($current['custom_ad_target_url'] ?? '') ?>" placeholder="https://t.me/your_channel or https://yourwebsite.com/course">
+                        </div>
+                        <small class="text-muted">Where students are redirected when tapping the CTA button. <strong>Leave blank</strong> if you want the button to automatically redirect to the chapter's configured JEE & NEET link!</small>
                     </div>
                 </div>
             </div>

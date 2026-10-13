@@ -34,11 +34,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
-        <!-- Google Mobile Ads / AdMob App ID (defaults to Google Test App ID) -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
     </application>
     <!-- Required to query activities for url_launcher on Android 11+ -->
     <queries>
