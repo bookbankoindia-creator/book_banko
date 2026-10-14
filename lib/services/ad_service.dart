@@ -326,16 +326,339 @@ class _CustomAdDialogState extends State<CustomAdDialog> {
     }
   }
 
+  bool _isMuted = false;
+
+  void _toggleMute() {
+    if (_videoController == null) return;
+    setState(() {
+      _isMuted = !_isMuted;
+      _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+    });
+  }
+
+  void _togglePlayPause() {
+    if (_videoController == null) return;
+    setState(() {
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
+      } else {
+        _videoController!.play();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isFullscreen = widget.layout == 'fullscreen';
+    if (widget.layout == 'fullscreen') {
+      return _buildFullscreenLayout(context);
+    }
+    return _buildModalCard(context);
+  }
+
+  Widget _buildFullscreenLayout(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final hasVideo = widget.mediaType == 'video' &&
+        _videoController != null &&
+        _isVideoInitialized;
+
+    return Material(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Full-screen Video or Image background
+          if (hasVideo)
+            GestureDetector(
+              onTap: _togglePlayPause,
+              child: SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _videoController!.value.size.width > 0
+                        ? _videoController!.value.size.width
+                        : mediaQuery.size.width,
+                    height: _videoController!.value.size.height > 0
+                        ? _videoController!.value.size.height
+                        : mediaQuery.size.height,
+                    child: VideoPlayer(_videoController!),
+                  ),
+                ),
+              ),
+            )
+          else if (widget.imageUrl.isNotEmpty)
+            Image.network(
+              widget.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  _buildFallbackHeader(mediaQuery.size.height),
+            )
+          else
+            _buildFallbackHeader(mediaQuery.size.height),
+
+          // 2. Play/Pause overlay indicator in center if paused
+          if (hasVideo && !_videoController!.value.isPlaying)
+            Center(
+              child: GestureDetector(
+                onTap: _togglePlayPause,
+                child: Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.60),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.80),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 46,
+                  ),
+                ),
+              ),
+            ),
+
+          // 3. Top Gradient Scrim with Sound Toggle & Skip/Close Button
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: mediaQuery.padding.top + 8,
+                left: 16,
+                right: 16,
+                bottom: 24,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black87, Colors.transparent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Mute / Sound Toggle Button for Video
+                  if (hasVideo)
+                    InkWell(
+                      onTap: _toggleMute,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.30),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isMuted
+                                  ? Icons.volume_off_rounded
+                                  : Icons.volume_up_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _isMuted ? 'Muted' : 'Sound On',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+
+                  // Top Right: Skip countdown / Close button
+                  _canClose ? _buildCloseButton() : _buildCountdownBadge(),
+                ],
+              ),
+            ),
+          ),
+
+          // 4. Video Progress Bar (if video)
+          if (hasVideo)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: VideoProgressIndicator(
+                _videoController!,
+                allowScrubbing: false,
+                colors: const VideoProgressColors(
+                  playedColor: AppColors.primary,
+                  bufferedColor: Colors.white24,
+                  backgroundColor: Colors.black45,
+                ),
+              ),
+            ),
+
+          // 5. Bottom Sleek Gradient Scrim with EXACTLY 2 LINES OF TEXT + CTA BUTTON
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 40,
+                bottom: mediaQuery.padding.bottom + 16,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.70),
+                    Colors.black.withValues(alpha: 0.95),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Line 1: Big Bold Headline (Title)
+                  Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Line 2: Subtitle / Description (2nd Line Text)
+                  Text(
+                    widget.subTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Call to Action (CTA) Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            Color(0xFF0284C7),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.50),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _handleCtaClick,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                widget.buttonText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 20,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Skip / Dismiss Text
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: InkWell(
+                        onTap: () {
+                          if (_canClose) {
+                            widget.onClose();
+                          }
+                        },
+                        child: Text(
+                          _canClose
+                              ? 'Continue Reading PDF'
+                              : 'Wait for timer to skip',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModalCard(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final double maxDialogWidth = 410.0;
-    final double dialogWidth = isFullscreen
-        ? mediaQuery.size.width
-        : (mediaQuery.size.width * 0.92 > maxDialogWidth
-            ? maxDialogWidth
-            : mediaQuery.size.width * 0.92);
+    final double dialogWidth = mediaQuery.size.width * 0.92 > maxDialogWidth
+        ? maxDialogWidth
+        : mediaQuery.size.width * 0.92;
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
@@ -344,33 +667,27 @@ class _CustomAdDialogState extends State<CustomAdDialog> {
           color: Colors.transparent,
           child: Container(
             width: dialogWidth,
-            height: isFullscreen ? mediaQuery.size.height : null,
-            margin: isFullscreen
-                ? EdgeInsets.zero
-                : const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(isFullscreen ? 0 : 24),
-              boxShadow: isFullscreen
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 36,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 36,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
             clipBehavior: Clip.antiAlias,
             child: SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
               child: Column(
-                mainAxisSize:
-                    isFullscreen ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Top Media Banner with Badge & Timer/Close button
-                  _buildMediaHeader(isFullscreen),
+                  _buildMediaHeader(false),
 
                   // Content Body Section
                   Padding(

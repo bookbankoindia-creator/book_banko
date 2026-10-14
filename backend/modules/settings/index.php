@@ -22,15 +22,15 @@ foreach ($rows as $r) {
 
 $defaults = [
     'custom_ad_enabled' => '1',
-    'custom_ad_layout' => 'modal',
-    'custom_ad_media_type' => 'image',
+    'custom_ad_layout' => 'fullscreen',
+    'custom_ad_media_type' => 'video',
     'custom_ad_title' => 'Best JEE & NEET Preparation Materials',
     'custom_ad_sub_title' => 'Top question bank, chapter-wise test series & expert video solutions!',
     'custom_ad_badge_text' => 'SPECIAL PROMOTION',
-    'custom_ad_pills' => 'Verified, Top Ranks, High Yield',
+    'custom_ad_pills' => '',
     'custom_ad_image' => '',
     'custom_ad_video' => '',
-    'custom_ad_target_url' => '',
+    'custom_ad_target_url' => 'https://bookbanko.com',
     'custom_ad_button_text' => 'Explore Questions Now 🚀',
     'custom_ad_skip_seconds' => '3',
     'custom_ad_require_complete' => '0',
@@ -67,6 +67,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif (isset($_POST['custom_ad_video_url'])) {
             $customAdVideo = trim($_POST['custom_ad_video_url']);
+        }
+
+        // Handle direct upload if performed via client-side Supabase Storage Uploader
+        if (!empty($_POST['direct_uploaded_file'])) {
+            $directFile = clean($_POST['direct_uploaded_file']);
+            $directUrl = resolveMediaUrl($directFile, 'banners');
+            $targetField = $_POST['direct_upload_target_input'] ?? '';
+            $directExt = strtolower(pathinfo($directFile, PATHINFO_EXTENSION));
+
+            if ($targetField === 'custom_ad_video_file' || in_array($directExt, ['mp4', 'webm', 'mov'])) {
+                $customAdVideo = $directUrl;
+            } elseif ($targetField === 'custom_ad_image_file' || in_array($directExt, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                $customAdImage = $directUrl;
+            }
         }
 
         $settings = [
@@ -359,24 +373,32 @@ include __DIR__ . '/../../includes/header.php';
                             </div>
 
                             <!-- Ad Content Text Inputs -->
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="badge_text_group">
                                 <label class="form-label fw-bold" for="custom_ad_badge_text">Promo Top Badge Text</label>
                                 <input type="text" class="form-control" id="custom_ad_badge_text" name="custom_ad_badge_text" value="<?= htmlspecialchars($current['custom_ad_badge_text'] ?? 'SPECIAL PROMOTION') ?>" placeholder="SPECIAL PROMOTION">
+                                <small class="text-muted">Top corner tag in Dialog popup</small>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold" for="custom_ad_pills">Feature Badges (Comma-separated)</label>
-                                <input type="text" class="form-control" id="custom_ad_pills" name="custom_ad_pills" value="<?= htmlspecialchars($current['custom_ad_pills'] ?? 'Verified, Top Ranks, High Yield') ?>" placeholder="Verified, Top Ranks, High Yield">
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label fw-bold" for="custom_ad_title">Ad Headline / Title</label>
-                                <input type="text" class="form-control" id="custom_ad_title" name="custom_ad_title" value="<?= htmlspecialchars($current['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials') ?>" placeholder="e.g. Best JEE & NEET Preparation Materials">
+                            <div class="col-md-6" id="pills_group">
+                                <label class="form-label fw-bold" for="custom_ad_pills">Feature Badges (Optional)</label>
+                                <input type="text" class="form-control" id="custom_ad_pills" name="custom_ad_pills" value="<?= htmlspecialchars($current['custom_ad_pills'] ?? '') ?>" placeholder="Verified, Top Ranks, High Yield">
+                                <small class="text-muted">Used in popup dialog (hidden in clean full-screen mode)</small>
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label fw-bold" for="custom_ad_sub_title">Ad Subtitle / Body Description</label>
+                                <label class="form-label fw-bold text-primary" for="custom_ad_title">
+                                    <i class="bi bi-type-h1 me-1"></i>Line 1: Ad Headline / Title (Bold)
+                                </label>
+                                <input type="text" class="form-control fw-semibold" id="custom_ad_title" name="custom_ad_title" value="<?= htmlspecialchars($current['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials') ?>" placeholder="e.g. Best JEE & NEET Preparation Materials">
+                                <small class="text-muted">First text line displayed prominently over video.</small>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-primary" for="custom_ad_sub_title">
+                                    <i class="bi bi-card-text me-1"></i>Line 2: Ad Subtitle / Description (Concise)
+                                </label>
                                 <textarea class="form-control" id="custom_ad_sub_title" name="custom_ad_sub_title" rows="2" placeholder="Top question bank, chapter-wise test series & expert video solutions!"><?= htmlspecialchars($current['custom_ad_sub_title'] ?? 'Top question bank, chapter-wise test series & expert video solutions!') ?></textarea>
+                                <small class="text-muted">Second text line displayed cleanly below title.</small>
                             </div>
 
                             <div class="col-md-6">
@@ -415,14 +437,14 @@ include __DIR__ . '/../../includes/header.php';
                                 </div>
 
                                 <!-- Screen Content Area -->
-                                <div id="phone_screen_container" style="background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%); min-height: 480px; border-radius: 24px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 12px;">
+                                <div id="phone_screen_container" style="background: #000; min-height: 480px; border-radius: 24px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0;">
                                     <!-- Blurred background document hint -->
-                                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);"></div>
+                                    <div id="phone_blur_backdrop" style="position: absolute; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); display: none;"></div>
 
                                     <!-- Ad Modal Card / Fullscreen Container -->
-                                    <div id="mockup_ad_card" style="position: relative; z-index: 10; width: 100%; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 16px 36px rgba(0,0,0,0.4); transition: all 0.3s ease;">
-                                        <!-- Header Image / Video -->
-                                        <div id="mockup_header" style="position: relative; height: 140px; background: linear-gradient(135deg, #0A2E68, #0061A4, #0284C7); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                    <div id="mockup_ad_card" style="position: relative; z-index: 10; width: 100%; height: 100%; min-height: 480px; background: #000; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; transition: all 0.3s ease;">
+                                        <!-- Header Image / Video (Fills entire screen in fullscreen) -->
+                                        <div id="mockup_header" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                                             <!-- Image layer -->
                                             <img id="mockup_header_img" src="<?= !empty($current['custom_ad_image']) ? htmlspecialchars(resolveMediaUrl($current['custom_ad_image'], 'banners')) : '' ?>" alt="Ad Banner" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; <?= empty($current['custom_ad_image']) ? 'display: none;' : '' ?>">
 
@@ -437,45 +459,54 @@ include __DIR__ . '/../../includes/header.php';
                                                 <div id="mockup_header_text" class="small fw-bold mt-1 text-white-50" style="font-size: 10px;">JEE & NEET Prep Exclusive</div>
                                             </div>
 
-                                            <!-- Promo Pill Badge -->
-                                            <div style="position: absolute; top: 8px; left: 8px; z-index: 3;">
+                                            <!-- Mute Toggle Icon (Fullscreen Video) -->
+                                            <div id="mockup_sound_btn" style="position: absolute; top: 10px; left: 10px; z-index: 5;">
+                                                <div style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.25); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                                    <i class="bi bi-volume-up-fill text-white" style="font-size: 12px;"></i>
+                                                </div>
+                                            </div>
+
+                                            <!-- Promo Pill Badge (Modal mode) -->
+                                            <div id="mockup_badge_wrapper" style="position: absolute; top: 8px; left: 8px; z-index: 4; display: none;">
                                                 <span class="badge" style="background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.3); font-size: 8.5px; border-radius: 12px; padding: 4px 7px;">
                                                     <i class="bi bi-star-fill text-warning me-1"></i><span id="preview_badge_text"><?= htmlspecialchars($current['custom_ad_badge_text'] ?? 'SPECIAL PROMOTION') ?></span>
                                                 </span>
                                             </div>
 
                                             <!-- Close / Skip Button -->
-                                            <div style="position: absolute; top: 8px; right: 8px; z-index: 3;">
-                                                <div id="mockup_close_btn" style="background: rgba(255,255,255,0.92); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
-                                                    <i class="bi bi-x-lg text-dark" style="font-size: 13px;"></i>
+                                            <div style="position: absolute; top: 10px; right: 10px; z-index: 5;">
+                                                <div id="mockup_close_btn" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
+                                                    <i class="bi bi-x-lg text-white" style="font-size: 12px;"></i>
                                                 </div>
-                                                <span id="mockup_countdown_badge" class="badge bg-dark text-white shadow-sm" style="font-size: 8px; display: none; padding: 3px 6px; border-radius: 10px;">Skip in 3s</span>
+                                                <span id="mockup_countdown_badge" class="badge bg-dark text-white shadow-sm border border-secondary" style="font-size: 9px; display: none; padding: 4px 8px; border-radius: 12px;">Skip in 3s</span>
                                             </div>
                                         </div>
 
-                                        <!-- Card Body Content -->
-                                        <div style="padding: 14px 12px 10px;">
-                                            <div id="preview_title_text" class="fw-bold text-dark lh-sm" style="font-size: 13.5px; margin-bottom: 5px;">
+                                        <!-- Card Body Content: Clean 2 Lines + CTA Button -->
+                                        <div id="mockup_card_body" style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 35px 14px 16px; background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.96) 100%);">
+                                            <!-- Line 1: Headline / Title -->
+                                            <div id="preview_title_text" class="fw-bold text-white lh-sm" style="font-size: 14.5px; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">
                                                 <?= htmlspecialchars($current['custom_ad_title'] ?? 'Best JEE & NEET Preparation Materials') ?>
                                             </div>
-                                            <div id="preview_subtitle_text" class="text-secondary lh-sm" style="font-size: 10.5px; margin-bottom: 9px;">
+                                            <!-- Line 2: Subtitle / Description -->
+                                            <div id="preview_subtitle_text" class="lh-sm" style="font-size: 11px; margin-bottom: 14px; color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
                                                 <?= htmlspecialchars($current['custom_ad_sub_title'] ?? 'Top question bank, chapter-wise test series & expert video solutions!') ?>
                                             </div>
 
-                                            <!-- Feature Tags -->
-                                            <div id="preview_pills_container" class="d-flex flex-wrap gap-1 mb-3">
+                                            <!-- Feature Tags (Shown only in modal mode) -->
+                                            <div id="preview_pills_container" class="d-flex flex-wrap gap-1 mb-3" style="display: none !important;">
                                                 <!-- Populated by JS -->
                                             </div>
 
                                             <!-- CTA Action Button -->
-                                            <button type="button" class="btn btn-primary w-100 rounded-3 py-2 fw-bold text-white shadow-sm border-0 d-flex align-items-center justify-content-center" style="background: linear-gradient(90deg, #0061A4, #0284C7); font-size: 12px;">
+                                            <button type="button" class="btn btn-primary w-100 rounded-3 py-2 fw-bold text-white shadow border-0 d-flex align-items-center justify-content-center" style="background: linear-gradient(90deg, #0061A4, #0284C7); font-size: 12.5px;">
                                                 <span id="preview_button_label" class="text-truncate me-1"><?= htmlspecialchars($current['custom_ad_button_text'] ?? 'Explore Questions Now 🚀') ?></span>
                                                 <i class="bi bi-arrow-right"></i>
                                             </button>
 
                                             <!-- Skip Text -->
                                             <div class="text-center mt-2">
-                                                <small class="text-muted" style="font-size: 9.5px;">Continue Reading PDF</small>
+                                                <small id="preview_skip_text" style="font-size: 10px; color: rgba(255,255,255,0.65);">Continue Reading PDF</small>
                                             </div>
                                         </div>
                                     </div>
@@ -502,7 +533,7 @@ include __DIR__ . '/../../includes/header.php';
                 const buttonText = document.getElementById('custom_ad_button_text').value || 'Explore Questions Now 🚀';
                 const layout = document.getElementById('custom_ad_layout').value;
                 const mediaType = document.getElementById('custom_ad_media_type').value;
-                const pillsText = document.getElementById('custom_ad_pills').value || 'Verified, Top Ranks, High Yield';
+                const pillsText = document.getElementById('custom_ad_pills').value || '';
                 const imageUrl = document.getElementById('custom_ad_image_url').value;
 
                 document.getElementById('preview_title_text').innerText = title;
@@ -513,32 +544,119 @@ include __DIR__ . '/../../includes/header.php';
                 // Feature Pills
                 const container = document.getElementById('preview_pills_container');
                 container.innerHTML = '';
-                pillsText.split(',').forEach(pill => {
-                    const clean = pill.trim();
-                    if (clean) {
-                        const span = document.createElement('span');
-                        span.className = 'badge border text-primary';
-                        span.style.background = '#F0F6FF';
-                        span.style.fontSize = '9px';
-                        span.style.padding = '3px 6px';
-                        span.innerHTML = '✔ ' + clean;
-                        container.appendChild(span);
-                    }
-                });
+                if (pillsText) {
+                    pillsText.split(',').forEach(pill => {
+                        const clean = pill.trim();
+                        if (clean) {
+                            const span = document.createElement('span');
+                            span.className = 'badge border text-primary';
+                            span.style.background = '#F0F6FF';
+                            span.style.fontSize = '9px';
+                            span.style.padding = '3px 6px';
+                            span.innerHTML = '✔ ' + clean;
+                            container.appendChild(span);
+                        }
+                    });
+                }
 
                 // Layout (Modal vs Fullscreen)
                 const card = document.getElementById('mockup_ad_card');
                 const screen = document.getElementById('phone_screen_container');
+                const header = document.getElementById('mockup_header');
+                const cardBody = document.getElementById('mockup_card_body');
+                const soundBtn = document.getElementById('mockup_sound_btn');
+                const badgeWrapper = document.getElementById('mockup_badge_wrapper');
+                const titleEl = document.getElementById('preview_title_text');
+                const subTitleEl = document.getElementById('preview_subtitle_text');
+                const skipTextEl = document.getElementById('preview_skip_text');
+                const blurBackdrop = document.getElementById('phone_blur_backdrop');
+                const closeBtn = document.getElementById('mockup_close_btn');
+
                 if (layout === 'fullscreen') {
-                    card.style.height = '100%';
-                    card.style.borderRadius = '24px';
                     screen.style.padding = '0';
-                    document.getElementById('mockup_header').style.height = '180px';
+                    if (blurBackdrop) blurBackdrop.style.display = 'none';
+
+                    card.style.height = '100%';
+                    card.style.minHeight = '480px';
+                    card.style.borderRadius = '24px';
+                    card.style.background = '#000000';
+                    card.style.display = 'flex';
+                    card.style.flexDirection = 'column';
+                    card.style.justifyContent = 'flex-end';
+
+                    header.style.position = 'absolute';
+                    header.style.inset = '0';
+                    header.style.width = '100%';
+                    header.style.height = '100%';
+                    header.style.zIndex = '1';
+
+                    cardBody.style.position = 'absolute';
+                    cardBody.style.bottom = '0';
+                    cardBody.style.left = '0';
+                    cardBody.style.right = '0';
+                    cardBody.style.zIndex = '10';
+                    cardBody.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.96) 100%)';
+                    cardBody.style.padding = '35px 14px 16px';
+
+                    titleEl.style.color = '#ffffff';
+                    titleEl.style.fontSize = '14.5px';
+                    titleEl.style.fontWeight = '700';
+                    titleEl.style.marginBottom = '4px';
+
+                    subTitleEl.style.color = 'rgba(255,255,255,0.85)';
+                    subTitleEl.style.fontSize = '11px';
+                    subTitleEl.style.marginBottom = '14px';
+
+                    container.style.setProperty('display', 'none', 'important');
+
+                    if (soundBtn) soundBtn.style.display = mediaType === 'video' ? 'block' : 'none';
+                    if (badgeWrapper) badgeWrapper.style.display = 'none';
+                    if (skipTextEl) skipTextEl.style.color = 'rgba(255,255,255,0.65)';
+                    if (closeBtn) {
+                        closeBtn.style.background = 'rgba(0,0,0,0.6)';
+                        closeBtn.querySelector('i').className = 'bi bi-x-lg text-white';
+                    }
                 } else {
-                    card.style.height = 'auto';
-                    card.style.borderRadius = '20px';
                     screen.style.padding = '12px';
-                    document.getElementById('mockup_header').style.height = '140px';
+                    if (blurBackdrop) blurBackdrop.style.display = 'block';
+
+                    card.style.height = 'auto';
+                    card.style.minHeight = 'auto';
+                    card.style.borderRadius = '20px';
+                    card.style.background = '#ffffff';
+                    card.style.display = 'block';
+
+                    header.style.position = 'relative';
+                    header.style.inset = 'auto';
+                    header.style.width = '100%';
+                    header.style.height = '140px';
+                    header.style.zIndex = 'auto';
+
+                    cardBody.style.position = 'static';
+                    cardBody.style.background = 'transparent';
+                    cardBody.style.padding = '14px 12px 10px';
+
+                    titleEl.style.color = '#111827';
+                    titleEl.style.fontSize = '13.5px';
+                    titleEl.style.fontWeight = 'bold';
+                    titleEl.style.marginBottom = '5px';
+
+                    subTitleEl.style.color = '#6b7280';
+                    subTitleEl.style.fontSize = '10.5px';
+                    subTitleEl.style.marginBottom = '9px';
+
+                    if (pillsText) {
+                        container.style.removeProperty('display');
+                        container.style.display = 'flex';
+                    }
+
+                    if (soundBtn) soundBtn.style.display = 'none';
+                    if (badgeWrapper) badgeWrapper.style.display = 'block';
+                    if (skipTextEl) skipTextEl.style.color = '#6c757d';
+                    if (closeBtn) {
+                        closeBtn.style.background = 'rgba(255,255,255,0.92)';
+                        closeBtn.querySelector('i').className = 'bi bi-x-lg text-dark';
+                    }
                 }
 
                 // Media Format (Image vs Video)

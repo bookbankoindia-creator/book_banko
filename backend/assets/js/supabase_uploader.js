@@ -45,23 +45,27 @@
                 const ext = (file.name.split('.').pop() || '').toLowerCase();
                 const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
-                // Supabase Storage Free Tier limit check (50MB)
-                if (file.size > 52428800) {
+                // Supabase Storage limit check (100MB for video, 50MB for PDFs/images)
+                const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+                const maxAllowedBytes = isVideo ? 104857600 : 52428800;
+                const maxAllowedMB = isVideo ? 100 : 50;
+
+                if (file.size > maxAllowedBytes) {
                     e.preventDefault();
-                    alert('File size (' + fileSizeMB + ' MB) exceeds Supabase maximum upload limit of 50 MB. Please compress or select a smaller PDF.');
+                    alert('File size (' + fileSizeMB + ' MB) exceeds maximum upload limit of ' + maxAllowedMB + ' MB. Please compress or select a smaller file.');
                     return false;
                 }
 
                 // Determine bucket
                 let bucket = 'pdfs';
-                if (inputName.includes('banner') || ['banners'].includes(bucket)) {
+                if (inputName.includes('video') || inputName.includes('banner') || inputName.includes('custom_ad') || isVideo) {
                     bucket = 'banners';
-                } else if (inputName.includes('product') || ['products'].includes(bucket)) {
+                } else if (inputName.includes('product')) {
                     bucket = 'products';
-                } else if (inputName.includes('icon') || ['icons'].includes(bucket)) {
+                } else if (inputName.includes('icon')) {
                     bucket = 'icons';
-                } else if (['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext)) {
-                    if (form.action.includes('banner')) bucket = 'banners';
+                } else if (['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(ext)) {
+                    if (form.action.includes('banner') || form.action.includes('settings') || window.location.href.includes('settings')) bucket = 'banners';
                     else if (form.action.includes('product')) bucket = 'products';
                     else bucket = 'icons';
                 }
@@ -84,6 +88,11 @@
                 else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
                 else if (ext === 'png') mimeType = 'image/png';
                 else if (ext === 'webp') mimeType = 'image/webp';
+                else if (ext === 'gif') mimeType = 'image/gif';
+                else if (ext === 'svg') mimeType = 'image/svg+xml';
+                else if (ext === 'mp4') mimeType = 'video/mp4';
+                else if (ext === 'webm') mimeType = 'video/webm';
+                else if (ext === 'mov') mimeType = 'video/quicktime';
 
                 xhr.setRequestHeader('Authorization', 'Bearer ' + window.SUPABASE_CONFIG.anonKey);
                 xhr.setRequestHeader('apikey', window.SUPABASE_CONFIG.anonKey);
@@ -107,8 +116,9 @@
                         // Set hidden inputs for PHP backend
                         setHiddenInput(form, 'direct_uploaded_file', uniqueId);
                         setHiddenInput(form, 'direct_file_size_mb', fileSizeMB);
+                        setHiddenInput(form, 'direct_upload_target_input', inputName);
 
-                        // Clear file input value so browser does NOT send 49MB payload to Vercel (bypassing 4.5MB limit)
+                        // Clear file input value so browser does NOT send payload to serverless backend
                         targetInput.value = '';
 
                         // Mark form as ready and submit
