@@ -140,7 +140,7 @@ function uploadFile(array $file, string $targetDir, array $allowedExtensions = [
 
     // Determine bucket name
     $bucket = 'pdfs';
-    if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg', 'mp4', 'webm'])) {
+    if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'mp4', 'webm', 'mov'])) {
         if (str_contains($targetDir, 'banners')) {
             $bucket = 'banners';
         } elseif (str_contains($targetDir, 'products')) {
@@ -166,17 +166,22 @@ function uploadFile(array $file, string $targetDir, array $allowedExtensions = [
         $mimeType = 'image/webp';
     } elseif ($ext === 'svg') {
         $mimeType = 'image/svg+xml';
+    } elseif ($ext === 'gif') {
+        $mimeType = 'image/gif';
     } elseif ($ext === 'mp4') {
         $mimeType = 'video/mp4';
     } elseif ($ext === 'webm') {
         $mimeType = 'video/webm';
+    } elseif ($ext === 'mov') {
+        $mimeType = 'video/quicktime';
     } elseif (function_exists('mime_content_type') && !empty($file['tmp_name']) && file_exists($file['tmp_name'])) {
         $detected = @mime_content_type($file['tmp_name']);
         if ($detected) $mimeType = $detected;
     }
 
-    // 1. Upload to Supabase Storage (if configured and file size <= 50MB)
-    if ($supabase->isConfigured() && $file['size'] <= 52428800) {
+    // 1. Upload to Supabase Storage (if configured and file size <= maxSizeMB)
+    $maxBytes = $maxSizeMB * 1024 * 1024;
+    if ($supabase->isConfigured() && $file['size'] <= $maxBytes) {
         $uploadResult = $supabase->uploadToStorage($bucket, $filename, $file['tmp_name'], $mimeType);
         if ($uploadResult['status']) {
             $supabaseSuccess = true;

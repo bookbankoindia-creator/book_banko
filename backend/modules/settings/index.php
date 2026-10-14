@@ -20,6 +20,24 @@ foreach ($rows as $r) {
     $current[$r['setting_key']] = $r['setting_value'];
 }
 
+$defaults = [
+    'custom_ad_enabled' => '1',
+    'custom_ad_layout' => 'modal',
+    'custom_ad_media_type' => 'image',
+    'custom_ad_title' => 'Best JEE & NEET Preparation Materials',
+    'custom_ad_sub_title' => 'Top question bank, chapter-wise test series & expert video solutions!',
+    'custom_ad_badge_text' => 'SPECIAL PROMOTION',
+    'custom_ad_pills' => 'Verified, Top Ranks, High Yield',
+    'custom_ad_image' => '',
+    'custom_ad_video' => '',
+    'custom_ad_target_url' => '',
+    'custom_ad_button_text' => 'Explore Questions Now 🚀',
+    'custom_ad_skip_seconds' => '3',
+    'custom_ad_require_complete' => '0',
+    'custom_ad_auto_close' => '0',
+];
+$current = array_merge($defaults, $current);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
     if (!verifyCSRFToken($csrf)) {
@@ -30,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['custom_ad_image_file']['name'])) {
             $uploadResult = uploadFile($_FILES['custom_ad_image_file'], BANNER_UPLOADS_PATH, ['jpg', 'jpeg', 'png', 'webp', 'gif'], 20);
             if ($uploadResult['status']) {
-                $customAdImage = $uploadResult['filename'];
+                $customAdImage = !empty($uploadResult['public_url']) ? $uploadResult['public_url'] : $uploadResult['filename'];
             } else {
                 flash('warning', 'Ad image upload notice: ' . ($uploadResult['message'] ?? 'Failed to upload'));
             }
@@ -43,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['custom_ad_video_file']['name'])) {
             $videoResult = uploadFile($_FILES['custom_ad_video_file'], BANNER_UPLOADS_PATH, ['mp4', 'webm', 'mov'], 100);
             if ($videoResult['status']) {
-                $customAdVideo = $videoResult['filename'];
+                $customAdVideo = !empty($videoResult['public_url']) ? $videoResult['public_url'] : $videoResult['filename'];
             } else {
                 flash('warning', 'Ad video upload notice: ' . ($videoResult['message'] ?? 'Failed to upload'));
             }
@@ -273,24 +291,33 @@ include __DIR__ . '/../../includes/header.php';
 
                             <!-- Banner Image Settings -->
                             <div class="col-12 p-3 bg-light rounded-3 border" id="image_settings_box">
-                                <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-image me-1"></i>Ad Banner Image</h6>
-                                <div class="row g-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-image me-1"></i>Ad Banner Image</h6>
+                                    <span class="badge bg-white text-secondary border">JPG, PNG, WEBP, GIF (Max 20MB)</span>
+                                </div>
+                                <div class="row g-3 align-items-center">
                                     <div class="col-md-7">
-                                        <label class="form-label small" for="custom_ad_image_file">Upload Banner File (JPG, PNG, WEBP)</label>
+                                        <label class="form-label small fw-semibold" for="custom_ad_image_file">Select Banner Image</label>
                                         <input type="file" class="form-control" id="custom_ad_image_file" name="custom_ad_image_file" accept="image/png,image/jpeg,image/webp,image/gif">
                                         <div class="mt-2">
-                                            <label class="form-label small text-muted mb-0" for="custom_ad_image_url">Or Image URL / Filename</label>
-                                            <input type="text" class="form-control form-control-sm font-monospace" id="custom_ad_image_url" name="custom_ad_image_url" value="<?= htmlspecialchars($current['custom_ad_image'] ?? '') ?>" placeholder="https://.../banner.png or bb_123.jpg">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="form-label small text-muted mb-0" for="custom_ad_image_url">Or Image URL / Cloud Path</label>
+                                                <button type="button" class="btn btn-link btn-xs text-danger p-0 text-decoration-none" onclick="clearImageMedia()">
+                                                    <i class="bi bi-trash3 me-1"></i>Clear Image
+                                                </button>
+                                            </div>
+                                            <input type="text" class="form-control form-control-sm font-monospace mt-1" id="custom_ad_image_url" name="custom_ad_image_url" value="<?= htmlspecialchars($current['custom_ad_image'] ?? '') ?>" placeholder="https://.../banner.png or bb_123.jpg">
                                         </div>
                                     </div>
                                     <div class="col-md-5 text-center">
-                                        <label class="form-label small">Current Banner</label>
-                                        <div class="border rounded bg-white p-1" style="height: 90px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                            <?php if (!empty($current['custom_ad_image'])): ?>
-                                                <img id="current_image_thumb" src="<?= htmlspecialchars(resolveMediaUrl($current['custom_ad_image'], 'banners')) ?>" alt="Banner" class="img-fluid rounded" style="max-height: 80px; object-fit: contain;">
-                                            <?php else: ?>
-                                                <span class="text-muted small">No image uploaded</span>
-                                            <?php endif; ?>
+                                        <label class="form-label small fw-semibold">Image Preview</label>
+                                        <div class="border rounded bg-white p-1 position-relative" style="height: 100px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                            <?php $hasImg = !empty($current['custom_ad_image']); ?>
+                                            <img id="current_image_thumb" src="<?= $hasImg ? htmlspecialchars(resolveMediaUrl($current['custom_ad_image'], 'banners')) : '' ?>" alt="Banner" class="img-fluid rounded" style="max-height: 90px; object-fit: contain; <?= $hasImg ? '' : 'display: none;' ?>">
+                                            <div id="no_image_placeholder" class="text-muted small" style="<?= $hasImg ? 'display: none;' : '' ?>">
+                                                <i class="bi bi-image text-muted fs-3 d-block"></i>
+                                                <span>No image uploaded</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -298,26 +325,34 @@ include __DIR__ . '/../../includes/header.php';
 
                             <!-- Video Settings -->
                             <div class="col-12 p-3 bg-light rounded-3 border" id="video_settings_box">
-                                <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-camera-video me-1"></i>Video Ad File / URL</h6>
-                                <div class="row g-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-camera-video me-1"></i>Ad Video File / Stream URL</h6>
+                                    <span class="badge bg-white text-secondary border">MP4, WebM, MOV (Max 100MB)</span>
+                                </div>
+                                <div class="row g-3 align-items-center">
                                     <div class="col-md-7">
-                                        <label class="form-label small" for="custom_ad_video_file">Upload Video File (MP4, WebM)</label>
+                                        <label class="form-label small fw-semibold" for="custom_ad_video_file">Select Promo Video</label>
                                         <input type="file" class="form-control" id="custom_ad_video_file" name="custom_ad_video_file" accept="video/mp4,video/webm,video/quicktime">
                                         <div class="mt-2">
-                                            <label class="form-label small text-muted mb-0" for="custom_ad_video_url">Or Direct Video URL</label>
-                                            <input type="text" class="form-control form-control-sm font-monospace" id="custom_ad_video_url" name="custom_ad_video_url" value="<?= htmlspecialchars($current['custom_ad_video'] ?? '') ?>" placeholder="https://example.com/promo.mp4">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="form-label small text-muted mb-0" for="custom_ad_video_url">Or Direct Video URL</label>
+                                                <button type="button" class="btn btn-link btn-xs text-danger p-0 text-decoration-none" onclick="clearVideoMedia()">
+                                                    <i class="bi bi-trash3 me-1"></i>Clear Video
+                                                </button>
+                                            </div>
+                                            <input type="text" class="form-control form-control-sm font-monospace mt-1" id="custom_ad_video_url" name="custom_ad_video_url" value="<?= htmlspecialchars($current['custom_ad_video'] ?? '') ?>" placeholder="https://example.com/promo.mp4">
                                         </div>
                                     </div>
                                     <div class="col-md-5 text-center">
-                                        <label class="form-label small">Video Status</label>
-                                        <div class="border rounded bg-white p-2" style="height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                            <?php if (!empty($current['custom_ad_video'])): ?>
-                                                <i class="bi bi-file-earmark-play-fill text-success fs-3"></i>
-                                                <small class="text-success fw-bold text-truncate w-100"><?= htmlspecialchars(basename($current['custom_ad_video'])) ?></small>
-                                            <?php else: ?>
-                                                <i class="bi bi-film text-muted fs-3"></i>
-                                                <span class="text-muted small">No video configured</span>
-                                            <?php endif; ?>
+                                        <label class="form-label small fw-semibold">Video Preview Player</label>
+                                        <div class="border rounded bg-white p-2 position-relative" style="min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                            <?php $hasVideo = !empty($current['custom_ad_video']); ?>
+                                            <video id="current_video_player" src="<?= $hasVideo ? htmlspecialchars(resolveMediaUrl($current['custom_ad_video'], 'banners')) : '' ?>" controls playsinline style="max-width: 100%; max-height: 80px; border-radius: 6px; <?= $hasVideo ? '' : 'display: none;' ?>"></video>
+                                            <div id="no_video_placeholder" class="text-muted small" style="<?= $hasVideo ? 'display: none;' : '' ?>">
+                                                <i class="bi bi-film text-muted fs-3 d-block"></i>
+                                                <span>No video uploaded</span>
+                                            </div>
+                                            <small id="video_filename_badge" class="text-success fw-bold text-truncate w-100 mt-1" style="<?= $hasVideo ? '' : 'display: none;' ?>"><?= $hasVideo ? htmlspecialchars(basename($current['custom_ad_video'])) : '' ?></small>
                                         </div>
                                     </div>
                                 </div>
@@ -390,6 +425,9 @@ include __DIR__ . '/../../includes/header.php';
                                         <div id="mockup_header" style="position: relative; height: 140px; background: linear-gradient(135deg, #0A2E68, #0061A4, #0284C7); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                                             <!-- Image layer -->
                                             <img id="mockup_header_img" src="<?= !empty($current['custom_ad_image']) ? htmlspecialchars(resolveMediaUrl($current['custom_ad_image'], 'banners')) : '' ?>" alt="Ad Banner" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; <?= empty($current['custom_ad_image']) ? 'display: none;' : '' ?>">
+
+                                            <!-- Video layer -->
+                                            <video id="mockup_header_video" src="<?= !empty($current['custom_ad_video']) ? htmlspecialchars(resolveMediaUrl($current['custom_ad_video'], 'banners')) : '' ?>" autoplay muted loop playsinline style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none;"></video>
 
                                             <!-- Fallback Icon / Video Play Overlay -->
                                             <div id="mockup_header_icon" style="text-align: center; color: #fff; z-index: 2;">
@@ -507,21 +545,155 @@ include __DIR__ . '/../../includes/header.php';
                 const playBadge = document.getElementById('mockup_play_badge');
                 const centerIcon = document.getElementById('mockup_center_icon');
                 const headerImg = document.getElementById('mockup_header_img');
+                const headerVideo = document.getElementById('mockup_header_video');
+                const videoUrl = document.getElementById('custom_ad_video_url').value;
 
+                // Visual highlight on relevant settings box
+                const imgBox = document.getElementById('image_settings_box');
+                const vidBox = document.getElementById('video_settings_box');
                 if (mediaType === 'video') {
-                    centerIcon.className = 'bi bi-play-fill fs-3 text-white ps-1';
-                    playBadge.style.display = 'flex';
-                    playBadge.style.background = 'rgba(0,0,0,0.65)';
+                    if (imgBox) imgBox.classList.remove('border-primary', 'shadow-sm');
+                    if (vidBox) vidBox.classList.add('border-primary', 'shadow-sm');
+
+                    if (headerImg) headerImg.style.display = 'none';
+
+                    if (headerVideo && (headerVideo.src || videoUrl)) {
+                        if (videoUrl && (!headerVideo.src || !headerVideo.src.includes(videoUrl))) {
+                            headerVideo.src = videoUrl;
+                        }
+                        headerVideo.style.display = 'block';
+                        playBadge.style.display = 'none';
+                        headerVideo.play().catch(() => {});
+                    } else {
+                        if (headerVideo) headerVideo.style.display = 'none';
+                        centerIcon.className = 'bi bi-play-fill fs-3 text-white ps-1';
+                        playBadge.style.display = 'flex';
+                        playBadge.style.background = 'rgba(0,0,0,0.65)';
+                    }
                     document.getElementById('mockup_header_text').innerText = 'Video Ad Preview';
                 } else {
-                    centerIcon.className = 'bi bi-mortarboard-fill fs-4 text-white';
-                    if (imageUrl || headerImg.getAttribute('src')) {
+                    if (vidBox) vidBox.classList.remove('border-primary', 'shadow-sm');
+                    if (imgBox) imgBox.classList.add('border-primary', 'shadow-sm');
+
+                    if (headerVideo) {
+                        headerVideo.pause();
+                        headerVideo.style.display = 'none';
+                    }
+
+                    const currentImgSrc = (headerImg && headerImg.getAttribute('src')) || imageUrl;
+                    if (currentImgSrc && currentImgSrc.trim() !== '') {
+                        if (headerImg) {
+                            if (imageUrl) headerImg.src = imageUrl;
+                            headerImg.style.display = 'block';
+                        }
                         playBadge.style.display = 'none';
                     } else {
+                        if (headerImg) headerImg.style.display = 'none';
+                        centerIcon.className = 'bi bi-mortarboard-fill fs-4 text-white';
                         playBadge.style.display = 'flex';
+                        playBadge.style.background = 'rgba(0,0,0,0.45)';
                     }
                     document.getElementById('mockup_header_text').innerText = 'JEE & NEET Prep Exclusive';
                 }
+            }
+
+            // Clear Media Handlers
+            function clearImageMedia() {
+                document.getElementById('custom_ad_image_file').value = '';
+                document.getElementById('custom_ad_image_url').value = '';
+                const thumb = document.getElementById('current_image_thumb');
+                if (thumb) {
+                    thumb.src = '';
+                    thumb.style.display = 'none';
+                }
+                const placeholder = document.getElementById('no_image_placeholder');
+                if (placeholder) placeholder.style.display = 'block';
+                const mockupImg = document.getElementById('mockup_header_img');
+                if (mockupImg) {
+                    mockupImg.src = '';
+                    mockupImg.style.display = 'none';
+                }
+                updateSimulator();
+            }
+
+            function clearVideoMedia() {
+                document.getElementById('custom_ad_video_file').value = '';
+                document.getElementById('custom_ad_video_url').value = '';
+                const player = document.getElementById('current_video_player');
+                if (player) {
+                    player.pause();
+                    player.src = '';
+                    player.style.display = 'none';
+                }
+                const placeholder = document.getElementById('no_video_placeholder');
+                if (placeholder) placeholder.style.display = 'block';
+                const badge = document.getElementById('video_filename_badge');
+                if (badge) badge.style.display = 'none';
+                const mockupVideo = document.getElementById('mockup_header_video');
+                if (mockupVideo) {
+                    mockupVideo.pause();
+                    mockupVideo.src = '';
+                    mockupVideo.style.display = 'none';
+                }
+                updateSimulator();
+            }
+
+            // Client-side Instant Previews when choosing files
+            const imgFileInput = document.getElementById('custom_ad_image_file');
+            if (imgFileInput) {
+                imgFileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const thumb = document.getElementById('current_image_thumb');
+                            if (thumb) {
+                                thumb.src = evt.target.result;
+                                thumb.style.display = 'block';
+                            }
+                            const placeholder = document.getElementById('no_image_placeholder');
+                            if (placeholder) placeholder.style.display = 'none';
+                            const mockupImg = document.getElementById('mockup_header_img');
+                            if (mockupImg) {
+                                mockupImg.src = evt.target.result;
+                                mockupImg.style.display = 'block';
+                            }
+                            updateSimulator();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            const vidFileInput = document.getElementById('custom_ad_video_file');
+            if (vidFileInput) {
+                vidFileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const objectUrl = URL.createObjectURL(file);
+                        const player = document.getElementById('current_video_player');
+                        if (player) {
+                            player.src = objectUrl;
+                            player.style.display = 'block';
+                            player.play().catch(() => {});
+                        }
+                        const placeholder = document.getElementById('no_video_placeholder');
+                        if (placeholder) placeholder.style.display = 'none';
+                        const badge = document.getElementById('video_filename_badge');
+                        if (badge) {
+                            badge.innerText = file.name + ' (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB)';
+                            badge.style.display = 'block';
+                        }
+                        const mockupVideo = document.getElementById('mockup_header_video');
+                        if (mockupVideo) {
+                            mockupVideo.src = objectUrl;
+                            mockupVideo.play().catch(() => {});
+                        }
+                        // Also auto-select Video media type for convenience
+                        document.getElementById('custom_ad_media_type').value = 'video';
+                        updateSimulator();
+                    }
+                });
             }
 
             let countdownTimerInterval = null;

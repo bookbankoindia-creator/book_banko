@@ -119,6 +119,11 @@ function isActiveNav(string $keyword): string {
             <span>Banners & Notices</span>
         </a>
 
+        <a href="<?= url('modules/settings/index.php#in_house_ads_section') ?>" class="nav-link-bb">
+            <i class="bi bi-badge-ad-fill text-warning"></i>
+            <span>In-App Custom Ads</span>
+        </a>
+
         <a href="<?= url('modules/settings/index.php') ?>" class="nav-link-bb <?= isActiveNav('/settings/') ?>">
             <i class="bi bi-sliders"></i>
             <span>App Settings</span>
