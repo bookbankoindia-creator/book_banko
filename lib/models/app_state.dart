@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../services/preference_service.dart';
 import 'data_models.dart';
 
 class BookBankoAppState extends ChangeNotifier {
@@ -16,6 +17,9 @@ class BookBankoAppState extends ChangeNotifier {
   SubjectModel? _selectedSubject;
   ChapterModel? _selectedChapter;
 
+  bool _isOnboarded = false;
+  bool _isPreferencesLoaded = false;
+
   String get selectedBoard => _selectedBoard;
   String get selectedMedium => _selectedMedium;
   String get selectedMediumName => _selectedMediumName;
@@ -25,10 +29,80 @@ class BookBankoAppState extends ChangeNotifier {
   int get activeStandardNumber => _activeStandardNumber;
   StreamType? get selectedStream => _selectedStream;
   StreamModel? get selectedStreamModel => _selectedStreamModel;
-  String? get selectedStreamSlug => _selectedStreamSlug ?? (_selectedStreamModel?.slug ?? _selectedStream?.name.toLowerCase());
-  String? get selectedStreamName => _selectedStreamName ?? (_selectedStreamModel?.name ?? _selectedStream?.displayName);
+  String? get selectedStreamSlug =>
+      _selectedStreamSlug ??
+      (_selectedStreamModel?.slug ?? _selectedStream?.name.toLowerCase());
+  String? get selectedStreamName =>
+      _selectedStreamName ??
+      (_selectedStreamModel?.name ?? _selectedStream?.displayName);
   SubjectModel? get selectedSubject => _selectedSubject;
   ChapterModel? get selectedChapter => _selectedChapter;
+  bool get isOnboarded => _isOnboarded;
+  bool get isPreferencesLoaded => _isPreferencesLoaded;
+
+  /// Loads saved board, medium, and standard from SharedPreferences
+  Future<bool> loadSavedPreferences() async {
+    try {
+      final data = await PreferenceService.getAllPreferences();
+      final hasCompleted = data['isOnboarded'] as bool? ?? false;
+
+      if (hasCompleted) {
+        if (data['board'] != null && (data['board'] as String).isNotEmpty) {
+          _selectedBoard = data['board'] as String;
+        }
+        if (data['medium'] != null && (data['medium'] as String).isNotEmpty) {
+          _selectedMedium = data['medium'] as String;
+        }
+        if (data['mediumName'] != null &&
+            (data['mediumName'] as String).isNotEmpty) {
+          _selectedMediumName = data['mediumName'] as String;
+        } else {
+          _selectedMediumName =
+              '${_selectedMedium.substring(0, 1).toUpperCase()}${_selectedMedium.substring(1)} Medium';
+        }
+
+        if (data['activeStandard'] != null) {
+          _activeStandardNumber = data['activeStandard'] as int;
+        }
+
+        final list = (data['myStandards'] as List<dynamic>?)?.cast<int>() ?? [];
+        _myStandards.clear();
+        if (list.isNotEmpty) {
+          _myStandards.addAll(list);
+        } else if (_activeStandardNumber > 0) {
+          _myStandards.add(_activeStandardNumber);
+        }
+
+        if (data['streamSlug'] != null) {
+          _selectedStreamSlug = data['streamSlug'] as String;
+          final lower = _selectedStreamSlug!.toLowerCase();
+          if (lower.contains('sci')) {
+            _selectedStream = StreamType.science;
+          } else if (lower.contains('comm')) {
+            _selectedStream = StreamType.commerce;
+          } else if (lower.contains('art')) {
+            _selectedStream = StreamType.arts;
+          }
+        }
+
+        if (data['streamName'] != null) {
+          _selectedStreamName = data['streamName'] as String;
+        }
+
+        _isOnboarded = true;
+        _isPreferencesLoaded = true;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error loading saved preferences into app state: $e');
+    }
+
+    _isOnboarded = false;
+    _isPreferencesLoaded = true;
+    notifyListeners();
+    return false;
+  }
 
   void selectModule({required String slug, required String title}) {
     _selectedModuleSlug = slug;
@@ -38,6 +112,7 @@ class BookBankoAppState extends ChangeNotifier {
 
   void selectBoard(String board) {
     _selectedBoard = board;
+    PreferenceService.saveBoard(board);
     notifyListeners();
   }
 
@@ -46,16 +121,20 @@ class BookBankoAppState extends ChangeNotifier {
     if (mediumName != null && mediumName.isNotEmpty) {
       _selectedMediumName = mediumName;
     } else {
-      _selectedMediumName = '${mediumCode.substring(0, 1).toUpperCase()}${mediumCode.substring(1)} Medium';
+      _selectedMediumName =
+          '${mediumCode.substring(0, 1).toUpperCase()}${mediumCode.substring(1)} Medium';
     }
+    PreferenceService.saveMedium(_selectedMedium, _selectedMediumName);
     notifyListeners();
   }
 
-  // Pick a single standard (e.g. from SelectStandardScreen onboarding)
+  /// Pick a single standard (e.g. from SelectStandardScreen onboarding)
   void setSingleStandard(int number) {
     _myStandards.clear();
     _myStandards.add(number);
     _activeStandardNumber = number;
+    PreferenceService.saveActiveStandard(number);
+    PreferenceService.saveMyStandards(_myStandards);
     notifyListeners();
   }
 
@@ -63,7 +142,9 @@ class BookBankoAppState extends ChangeNotifier {
     _activeStandardNumber = number;
     if (!_myStandards.contains(number)) {
       _myStandards.add(number);
+      PreferenceService.saveMyStandards(_myStandards);
     }
+    PreferenceService.saveActiveStandard(number);
     notifyListeners();
   }
 
@@ -71,6 +152,8 @@ class BookBankoAppState extends ChangeNotifier {
     if (_myStandards.contains(number)) return false;
     _myStandards.add(number);
     _activeStandardNumber = number;
+    PreferenceService.saveActiveStandard(number);
+    PreferenceService.saveMyStandards(_myStandards);
     notifyListeners();
     return true;
   }
@@ -81,6 +164,8 @@ class BookBankoAppState extends ChangeNotifier {
     if (_activeStandardNumber == number) {
       _activeStandardNumber = _myStandards.first;
     }
+    PreferenceService.saveActiveStandard(_activeStandardNumber);
+    PreferenceService.saveMyStandards(_myStandards);
     notifyListeners();
   }
 
@@ -106,6 +191,10 @@ class BookBankoAppState extends ChangeNotifier {
     } else if (lower.contains('art')) {
       _selectedStream = StreamType.arts;
     }
+    PreferenceService.saveStream(
+      slug: _selectedStreamSlug,
+      name: _selectedStreamName,
+    );
     notifyListeners();
   }
 
@@ -113,6 +202,10 @@ class BookBankoAppState extends ChangeNotifier {
     _selectedStream = stream;
     _selectedStreamSlug = stream.name.toLowerCase();
     _selectedStreamName = stream.displayName;
+    PreferenceService.saveStream(
+      slug: _selectedStreamSlug,
+      name: _selectedStreamName,
+    );
     notifyListeners();
   }
 
@@ -123,6 +216,37 @@ class BookBankoAppState extends ChangeNotifier {
 
   void selectChapter(ChapterModel chapter) {
     _selectedChapter = chapter;
+    notifyListeners();
+  }
+
+  /// Finalize and persist onboarding completion
+  Future<void> completeOnboarding() async {
+    _isOnboarded = true;
+    await PreferenceService.saveBoard(_selectedBoard);
+    await PreferenceService.saveMedium(_selectedMedium, _selectedMediumName);
+    await PreferenceService.saveActiveStandard(_activeStandardNumber);
+    await PreferenceService.saveMyStandards(_myStandards);
+    if (_selectedStreamSlug != null || _selectedStreamName != null) {
+      await PreferenceService.saveStream(
+        slug: _selectedStreamSlug,
+        name: _selectedStreamName,
+      );
+    }
+    await PreferenceService.setOnboarded(true);
+    notifyListeners();
+  }
+
+  /// Reset all stored preferences
+  Future<void> resetPreferences() async {
+    await PreferenceService.clearAll();
+    _isOnboarded = false;
+    _selectedBoard = 'GSEB';
+    _selectedMedium = 'english';
+    _selectedMediumName = 'English Medium';
+    _activeStandardNumber = 0;
+    _myStandards.clear();
+    _selectedStreamSlug = null;
+    _selectedStreamName = null;
     notifyListeners();
   }
 }

@@ -127,6 +127,10 @@ class _SelectMediumScreenState extends State<SelectMediumScreen> {
               BookBankoButton(
                 text: 'Continue',
                 onPressed: () {
+                  appState.selectMedium(
+                    appState.selectedMedium,
+                    mediumName: appState.selectedMediumName,
+                  );
                   Navigator.pushNamed(context, '/select_standard');
                 },
               ),

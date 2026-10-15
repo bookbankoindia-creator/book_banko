@@ -721,5 +721,67 @@ class HigherEducationMaterialModel {
   }
 }
 
+class AiCourseMaterialModel {
+  final int id;
+  final int standardNumber;
+  final String? standardName;
+  final String title;
+  final String? moduleName;
+  final String materialType;
+  final String? description;
+  final String pdfUrl;
+  final String? videoUrl;
+  final int pageCount;
+  final double fileSizeMb;
+  final bool isFree;
+  final int displayOrder;
+
+  const AiCourseMaterialModel({
+    required this.id,
+    required this.standardNumber,
+    this.standardName,
+    required this.title,
+    this.moduleName,
+    this.materialType = 'AI Course Material',
+    this.description,
+    required this.pdfUrl,
+    this.videoUrl,
+    this.pageCount = 1,
+    this.fileSizeMb = 0.0,
+    this.isFree = true,
+    this.displayOrder = 1,
+  });
+
+  factory AiCourseMaterialModel.fromJson(Map<String, dynamic> json) {
+    final stdNum = int.tryParse(json['standard_number']?.toString() ?? '0') ?? 0;
+    return AiCourseMaterialModel(
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      standardNumber: stdNum,
+      standardName: json['standard_name']?.toString() ?? 'Standard $stdNum',
+      title: json['title']?.toString() ?? '',
+      moduleName: json['module_name']?.toString(),
+      materialType: json['material_type']?.toString() ?? 'AI Course Material',
+      description: json['description']?.toString(),
+      pdfUrl: json['full_pdf_url']?.toString() ?? json['pdf_file_path']?.toString() ?? '',
+      videoUrl: json['video_url']?.toString(),
+      pageCount: int.tryParse(json['page_count']?.toString() ?? '1') ?? 1,
+      fileSizeMb: double.tryParse(json['file_size_mb']?.toString() ?? '0.0') ?? 0.0,
+      isFree: json['is_free'] == null || json['is_free'] == 1 || json['is_free'] == true || json['is_free'] == '1',
+      displayOrder: int.tryParse(json['display_order']?.toString() ?? '1') ?? 1,
+    );
+  }
+
+  ChapterModel toChapterModel() {
+    return ChapterModel(
+      number: displayOrder,
+      title: title,
+      pdfUrl: pdfUrl,
+      pageCount: pageCount,
+      moduleSlug: 'ai_course',
+    );
+  }
+}
+
+
 
 

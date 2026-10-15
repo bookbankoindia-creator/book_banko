@@ -166,16 +166,19 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
               const SizedBox(height: 12),
               BookBankoButton(
                 text: 'Continue',
-                onPressed: () {
+                onPressed: () async {
                   final activeStd = appState.activeStandardNumber;
                   if (activeStd == 11 || activeStd == 12) {
                     Navigator.pushNamed(context, '/select_stream');
                   } else {
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/home',
-                      (route) => false,
-                    );
+                    await appState.completeOnboarding();
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/home',
+                        (route) => false,
+                      );
+                    }
                   }
                 },
               ),

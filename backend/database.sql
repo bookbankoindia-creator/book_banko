@@ -389,5 +389,44 @@ INSERT INTO `competitive_exam_materials` (`id`, `exam_id`, `title`, `subject_nam
 (7, 3, 'GATE Core Subject Quick Revision Notes & Concepts', 'Technical', 'Notes', '2025', 'Handwritten summary notes and high priority formulas for GATE technical sections.', 'bb_6ab901c015ba22.92430469.pdf', '', 55, 3.90, 2, 'active')
 ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);
 
+-- --------------------------------------------------------
+-- Table: ai_course_materials (Artificial Intelligence & Coding Materials for Standards 6-12)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ai_course_materials` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `standard_id` INT NULL,
+  `standard_number` INT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `module_name` VARCHAR(150) NULL,
+  `material_type` VARCHAR(100) DEFAULT 'Course Notes & PDF',
+  `description` TEXT NULL,
+  `pdf_file_path` VARCHAR(255) NULL,
+  `pdf_external_url` VARCHAR(500) NULL,
+  `video_url` VARCHAR(500) NULL,
+  `thumbnail` VARCHAR(255) NULL,
+  `page_count` INT NOT NULL DEFAULT 1,
+  `file_size_mb` DECIMAL(6,2) DEFAULT 0.00,
+  `is_free` TINYINT(1) NOT NULL DEFAULT 1,
+  `views_count` INT NOT NULL DEFAULT 0,
+  `display_order` INT NOT NULL DEFAULT 1,
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`standard_id`) REFERENCES `standards`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `ai_course_materials` (`id`, `standard_number`, `title`, `module_name`, `description`, `page_count`, `file_size_mb`, `display_order`, `status`) VALUES
+(1, 6, 'Introduction to Artificial Intelligence & Smart World', 'Module 1 • What is AI?', 'Discover how machines learn, everyday examples of AI like voice assistants, recommendation systems, and computer vision.', 16, 2.10, 1, 'active'),
+(2, 7, 'Computational Thinking & AI Problem Solving', 'Module 1 • Algorithms & Logic', 'Understanding algorithms, block coding, decision trees, and designing simple conversational agents.', 20, 2.45, 1, 'active'),
+(3, 8, 'Data, Sensors & Computer Perception in AI', 'Module 1 • Data & Sensors', 'How machines collect and clean data, image recognition fundamentals, and ethics in automated systems.', 24, 2.80, 1, 'active'),
+(4, 9, 'Python for Artificial Intelligence & Data Science', 'Module 1 • Python Coding Essentials', 'Hands-on Python syntax, variables, lists, dictionaries, functions, and working with data for machine learning.', 32, 3.20, 1, 'active'),
+(5, 9, 'Computer Vision & Natural Language Processing (NLP)', 'Module 2 • Core AI Domains', 'Techniques for feature extraction, optical character recognition, text sentiment analysis, and speech processing.', 28, 2.90, 2, 'active'),
+(6, 10, 'Machine Learning Foundations & Supervised Learning', 'Module 1 • Machine Learning', 'Supervised learning, classification vs regression, decision tree modeling, model training and evaluation metrics.', 36, 3.60, 1, 'active'),
+(7, 10, 'Board Exam AI Revision Guide & Ethics Project Cycle', 'Module 2 • Board Curriculum & Ethics', 'Complete curriculum revision notes, AI project cycle (Problem Scoping, Data Acquisition, Exploration, Modeling, Evaluation), and AI ethics.', 44, 4.10, 2, 'active'),
+(8, 11, 'Applied Neural Networks & Deep Learning Architectures', 'Module 1 • Deep Learning', 'Artificial Neural Networks (ANN), activation functions, perceptrons, backpropagation, and training deep models.', 48, 4.50, 1, 'active'),
+(9, 12, 'Generative AI, Large Language Models & AI Capstone', 'Module 1 • Generative AI & LLMs', 'Transformers, Prompt Engineering, Large Language Models (LLMs), diffusion models, and developing end-to-end AI applications.', 52, 5.20, 1, 'active')
+ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);
+
+
 
 

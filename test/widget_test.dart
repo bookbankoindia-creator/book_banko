@@ -12,8 +12,8 @@ void main() {
       ),
     );
 
-    // Verify that Book Banko title is rendered
+    // Verify that Book Banko title and subtitle are rendered
     expect(find.text('Book Banko'), findsOneWidget);
-    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.text('Your Smart Study App'), findsOneWidget);
   });
 }

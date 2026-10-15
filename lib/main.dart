@@ -16,6 +16,7 @@ import 'screens/extra_material_screen.dart';
 import 'screens/study_material_screen.dart';
 import 'screens/competitive_exams_screen.dart';
 import 'screens/higher_education_screen.dart';
+import 'screens/ai_course_standards_screen.dart';
 import 'services/ad_service.dart';
 
 void main() async {
@@ -54,6 +55,7 @@ class BookBankoApp extends StatelessWidget {
         '/study_material': (context) => const StudyMaterialScreen(),
         '/competitive_exams': (context) => const CompetitiveExamsScreen(),
         '/higher_education': (context) => const HigherEducationScreen(),
+        '/ai_course_standards': (context) => const AiCourseStandardsScreen(),
       },
     );
   }

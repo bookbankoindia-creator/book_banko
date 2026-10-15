@@ -1,6 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../models/app_state.dart';
 import '../widgets/logo_widget.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,12 +15,33 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-navigate to board selection screen after 2.5 seconds
-    Timer(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/select_board');
-      }
-    });
+    _handleSplashNavigation();
+  }
+
+  Future<void> _handleSplashNavigation() async {
+    final startTime = DateTime.now();
+
+    // Load saved preferences from SharedPreferences into BookBankoAppState
+    final appState = Provider.of<BookBankoAppState>(context, listen: false);
+    final hasSavedPreferences = await appState.loadSavedPreferences();
+
+    // Ensure splash is displayed nicely for a smooth duration (2 seconds)
+    const minSplashDuration = Duration(milliseconds: 2000);
+    final elapsed = DateTime.now().difference(startTime);
+    if (elapsed < minSplashDuration) {
+      await Future.delayed(minSplashDuration - elapsed);
+    }
+
+    if (!mounted) return;
+
+    // Second time opening app (or whenever preferences are already stored):
+    // Directly navigate to HomeScreen instead of showing Board/Medium/Standard selection again.
+    if (hasSavedPreferences && appState.isOnboarded) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      // First time opening app: guide the user through onboarding
+      Navigator.pushReplacementNamed(context, '/select_board');
+    }
   }
 
   @override
@@ -73,5 +95,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-
-

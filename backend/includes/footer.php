@@ -32,24 +32,99 @@ window.SUPABASE_CONFIG = {
 
 <script>
 $(document).ready(function() {
-    // Initialize DataTables with responsive options
+    // Initialize DataTables with responsive horizontal scrolling
     if ($('.data-table').length > 0) {
-        $('.data-table').DataTable({
-            responsive: true,
-            autoWidth: false,
-            pageLength: 10,
-            language: {
-                search: "",
-                searchPlaceholder: "Search records...",
-                lengthMenu: "Show _MENU_ entries"
+        $('.data-table').each(function() {
+            var $table = $(this);
+            // If table is inside .table-responsive, unwrap so DataTables scrollX controls only the table body
+            // while search and pagination stay pinned to 100% of the visible card
+            if ($table.parent().hasClass('table-responsive')) {
+                $table.unwrap();
             }
+            $table.DataTable({
+                responsive: false,
+                scrollX: true,
+                scrollCollapse: true,
+                autoWidth: false,
+                pageLength: 10,
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search records...",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "Showing 0 to 0 of 0 entries",
+                    infoFiltered: "(filtered from _MAX_ total entries)",
+                    paginate: {
+                        first: '<i class="bi bi-chevron-double-left"></i>',
+                        previous: '<i class="bi bi-chevron-left"></i>',
+                        next: '<i class="bi bi-chevron-right"></i>',
+                        last: '<i class="bi bi-chevron-double-right"></i>'
+                    }
+                }
+            });
         });
     }
 
-    // Sidebar Mobile Toggle & Backdrop handling
-    $('#sidebarToggle, #sidebarCloseBtn, #sidebarBackdrop').on('click', function() {
-        $('#appSidebar').toggleClass('show');
-        $('#sidebarBackdrop').toggleClass('show');
+    // Restore desktop sidebar collapsed preference if saved
+    if (window.innerWidth >= 992) {
+        if (localStorage.getItem('bb_sidebar_collapsed') === '1') {
+            $('.app-wrapper').addClass('sidebar-collapsed');
+        }
+    }
+
+    // Sidebar Toggle handling (Desktop collapse & Mobile drawer)
+    $('#sidebarToggle').on('click', function(e) {
+        e.preventDefault();
+        if (window.innerWidth >= 992) {
+            $('.app-wrapper').toggleClass('sidebar-collapsed');
+            var isCollapsed = $('.app-wrapper').hasClass('sidebar-collapsed');
+            localStorage.setItem('bb_sidebar_collapsed', isCollapsed ? '1' : '0');
+        } else {
+            $('#appSidebar').toggleClass('show');
+            $('#sidebarBackdrop').toggleClass('show');
+        }
+        // Readjust DataTables columns after transition
+        setTimeout(function() {
+            if ($.fn.dataTable) {
+                $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+            }
+        }, 320);
+    });
+
+    // Close mobile drawer via close button or backdrop
+    $('#sidebarCloseBtn, #sidebarBackdrop').on('click', function() {
+        $('#appSidebar').removeClass('show');
+        $('#sidebarBackdrop').removeClass('show');
+    });
+
+    // Auto-close mobile drawer when navigation item is clicked
+    $('.sidebar-menu .nav-link-bb').on('click', function() {
+        if (window.innerWidth < 992) {
+            $('#appSidebar').removeClass('show');
+            $('#sidebarBackdrop').removeClass('show');
+        }
+    });
+
+    // Window resize handler: adjust DataTables and fix responsive states
+    var resizeTimer;
+    $(window).on('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (window.innerWidth >= 992) {
+                $('#appSidebar').removeClass('show');
+                $('#sidebarBackdrop').removeClass('show');
+                if (localStorage.getItem('bb_sidebar_collapsed') === '1') {
+                    $('.app-wrapper').addClass('sidebar-collapsed');
+                } else {
+                    $('.app-wrapper').removeClass('sidebar-collapsed');
+                }
+            } else {
+                $('.app-wrapper').removeClass('sidebar-collapsed');
+            }
+            if ($.fn.dataTable) {
+                $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+            }
+        }, 150);
     });
 
     // Auto dismiss flash alerts after 5 seconds

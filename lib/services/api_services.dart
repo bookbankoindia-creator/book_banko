@@ -343,7 +343,196 @@ class ApiService {
     return [];
   }
 
-  // 8. Fetch App Config & AdMob settings dynamically
+  // 8. Fetch AI Course Materials & PDFs by Standard dynamically
+  static Future<List<AiCourseMaterialModel>> fetchAiCourseMaterials({
+    required int standardNumber,
+    String? search,
+  }) async {
+    try {
+      final queryParams = <String>['standard_number=$standardNumber'];
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams.add('search=${Uri.encodeComponent(search.trim())}');
+      }
+
+      final queryString = '?${queryParams.join('&')}';
+      final response = await _getWithFallback('get_ai_course_materials.php$queryString');
+
+      if (response != null && response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          final List list = data['data'];
+          if (list.isNotEmpty) {
+            return list.map((item) => AiCourseMaterialModel.fromJson(item)).toList();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching AI course materials from API: $e');
+    }
+
+    return _getDefaultAiMaterialsForStandard(standardNumber);
+  }
+
+  static List<AiCourseMaterialModel> _getDefaultAiMaterialsForStandard(int std) {
+    switch (std) {
+      case 6:
+        return const [
+          AiCourseMaterialModel(
+            id: 101,
+            standardNumber: 6,
+            title: 'Introduction to Artificial Intelligence & Smart World',
+            moduleName: 'Module 1 • What is AI?',
+            description: 'Discover how machines learn, everyday examples of AI like voice assistants, recommendation systems, and computer vision.',
+            pdfUrl: '',
+            pageCount: 16,
+            fileSizeMb: 2.10,
+          ),
+          AiCourseMaterialModel(
+            id: 102,
+            standardNumber: 6,
+            title: 'Human vs Machine Intelligence & Fun Logic Games',
+            moduleName: 'Module 2 • Smart Machines',
+            description: 'Comparing human brain vs computer processing, pattern recognition, and decision puzzles.',
+            pdfUrl: '',
+            pageCount: 18,
+            fileSizeMb: 2.30,
+          ),
+        ];
+      case 7:
+        return const [
+          AiCourseMaterialModel(
+            id: 201,
+            standardNumber: 7,
+            title: 'Computational Thinking & AI Problem Solving',
+            moduleName: 'Module 1 • Algorithms & Logic',
+            description: 'Understanding algorithms, block coding, decision trees, and designing simple conversational agents.',
+            pdfUrl: '',
+            pageCount: 20,
+            fileSizeMb: 2.45,
+          ),
+          AiCourseMaterialModel(
+            id: 202,
+            standardNumber: 7,
+            title: 'How Chatbots & Virtual Assistants Work',
+            moduleName: 'Module 2 • Conversational AI',
+            description: 'Introduction to text prompts, keyword matching, and building your first interactive chatbot.',
+            pdfUrl: '',
+            pageCount: 22,
+            fileSizeMb: 2.60,
+          ),
+        ];
+      case 8:
+        return const [
+          AiCourseMaterialModel(
+            id: 301,
+            standardNumber: 8,
+            title: 'Data, Sensors & Computer Perception in AI',
+            moduleName: 'Module 1 • Data & Sensors',
+            description: 'How machines collect and clean data, image recognition fundamentals, and ethics in automated systems.',
+            pdfUrl: '',
+            pageCount: 24,
+            fileSizeMb: 2.80,
+          ),
+          AiCourseMaterialModel(
+            id: 302,
+            standardNumber: 8,
+            title: 'Smart Automation & Intro to Robotics',
+            moduleName: 'Module 2 • Robotics & Automation',
+            description: 'Robotic arms, autonomous vehicles, sensor feedback loops, and smart city applications.',
+            pdfUrl: '',
+            pageCount: 26,
+            fileSizeMb: 3.10,
+          ),
+        ];
+      case 9:
+        return const [
+          AiCourseMaterialModel(
+            id: 401,
+            standardNumber: 9,
+            title: 'Python for Artificial Intelligence & Data Science',
+            moduleName: 'Module 1 • Python Coding Essentials',
+            description: 'Hands-on Python syntax, variables, lists, dictionaries, functions, and working with data for machine learning.',
+            pdfUrl: '',
+            pageCount: 32,
+            fileSizeMb: 3.20,
+          ),
+          AiCourseMaterialModel(
+            id: 402,
+            standardNumber: 9,
+            title: 'Computer Vision & Natural Language Processing (NLP)',
+            moduleName: 'Module 2 • Core AI Domains',
+            description: 'Techniques for feature extraction, optical character recognition, text sentiment analysis, and speech processing.',
+            pdfUrl: '',
+            pageCount: 28,
+            fileSizeMb: 2.90,
+          ),
+        ];
+      case 10:
+        return const [
+          AiCourseMaterialModel(
+            id: 501,
+            standardNumber: 10,
+            title: 'Machine Learning Foundations & Supervised Learning',
+            moduleName: 'Module 1 • Machine Learning',
+            description: 'Supervised learning, classification vs regression, decision tree modeling, model training and evaluation metrics.',
+            pdfUrl: '',
+            pageCount: 36,
+            fileSizeMb: 3.60,
+          ),
+          AiCourseMaterialModel(
+            id: 502,
+            standardNumber: 10,
+            title: 'Board Exam AI Revision Guide & Ethics Project Cycle',
+            moduleName: 'Module 2 • Board Curriculum & Ethics',
+            description: 'Complete curriculum revision notes, AI project cycle (Problem Scoping, Data Acquisition, Exploration, Modeling, Evaluation), and AI ethics.',
+            pdfUrl: '',
+            pageCount: 44,
+            fileSizeMb: 4.10,
+          ),
+        ];
+      case 11:
+        return const [
+          AiCourseMaterialModel(
+            id: 601,
+            standardNumber: 11,
+            title: 'Applied Neural Networks & Deep Learning Architectures',
+            moduleName: 'Module 1 • Deep Learning',
+            description: 'Artificial Neural Networks (ANN), activation functions, perceptrons, backpropagation, and training deep models.',
+            pdfUrl: '',
+            pageCount: 48,
+            fileSizeMb: 4.50,
+          ),
+        ];
+      case 12:
+        return const [
+          AiCourseMaterialModel(
+            id: 701,
+            standardNumber: 12,
+            title: 'Generative AI, Large Language Models & AI Capstone',
+            moduleName: 'Module 1 • Generative AI & LLMs',
+            description: 'Transformers, Prompt Engineering, Large Language Models (LLMs), diffusion models, and developing end-to-end AI applications.',
+            pdfUrl: '',
+            pageCount: 52,
+            fileSizeMb: 5.20,
+          ),
+        ];
+      default:
+        return [
+          AiCourseMaterialModel(
+            id: 801,
+            standardNumber: std,
+            title: 'Standard $std Artificial Intelligence & Coding Guide',
+            moduleName: 'Module 1 • AI Essentials',
+            description: 'Complete syllabus guide, theory, sample coding exercises, and practice questions for Standard $std.',
+            pdfUrl: '',
+            pageCount: 30,
+            fileSizeMb: 3.00,
+          ),
+        ];
+    }
+  }
+
+  // 9. Fetch App Config & AdMob settings dynamically
   static Future<Map<String, dynamic>?> getAppConfig() async {
     try {
       final response = await _getWithFallback('get_app_config.php');

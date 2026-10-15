@@ -173,8 +173,15 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
               const SizedBox(height: 12),
               BookBankoButton(
                 text: 'Continue',
-                onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                onPressed: () async {
+                  await appState.completeOnboarding();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/home',
+                      (route) => false,
+                    );
+                  }
                 },
                 icon: Icons.arrow_forward_rounded,
               ),

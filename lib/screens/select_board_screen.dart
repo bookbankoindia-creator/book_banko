@@ -119,6 +119,7 @@ class _SelectBoardScreenState extends State<SelectBoardScreen> {
               BookBankoButton(
                 text: 'Continue',
                 onPressed: () {
+                  appState.selectBoard(appState.selectedBoard);
                   Navigator.pushNamed(context, '/select_medium');
                 },
               ),

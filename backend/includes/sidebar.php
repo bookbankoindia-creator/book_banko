@@ -107,6 +107,11 @@ function isActiveNav(string $keyword): string {
             <span>Higher Education</span>
         </a>
 
+        <a href="<?= url('modules/ai_courses/index.php') ?>" class="nav-link-bb <?= isActiveNav('/ai_courses/') ?>">
+            <i class="bi bi-cpu-fill text-primary"></i>
+            <span>AI Course Materials</span>
+        </a>
+
         <a href="<?= url('modules/study_products/index.php') ?>" class="nav-link-bb <?= isActiveNav('/study_products/') ?>">
             <i class="bi bi-cart4 text-success"></i>
             <span>Study Products (Store)</span>

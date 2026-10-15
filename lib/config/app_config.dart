@@ -20,6 +20,7 @@ class AppConfig {
   static const List<String> defaultCandidateUrls = [
     'https://bookbanko.vercel.app/api',
     'https://bookbanko-neon.vercel.app/api',
+    'http://192.168.0.101/Book_Banko/backend/api',
     'http://10.0.2.2/Book_Banko/backend/api',
     'http://localhost/Book_Banko/backend/api',
     'http://127.0.0.1/Book_Banko/backend/api',
