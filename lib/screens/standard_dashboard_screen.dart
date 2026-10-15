@@ -5,6 +5,7 @@ import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/dashboard_card.dart';
+import 'ai_course_materials_screen.dart';
 
 class StandardDashboardScreen extends StatelessWidget {
   const StandardDashboardScreen({super.key});
@@ -121,8 +122,21 @@ class StandardDashboardScreen extends StatelessWidget {
                       title: item.title,
                       icon: item.icon,
                       onTap: () {
-                        appState.selectModule(slug: item.slug, title: item.title);
-                        Navigator.pushNamed(context, '/textbooks');
+                        if (item.slug == 'ai_course') {
+                          appState.selectModule(slug: item.slug, title: item.title);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AiCourseMaterialsScreen(
+                                standardNumber: activeStd,
+                                standardName: 'Standard $activeStd',
+                              ),
+                            ),
+                          );
+                        } else {
+                          appState.selectModule(slug: item.slug, title: item.title);
+                          Navigator.pushNamed(context, '/textbooks');
+                        }
                       },
                     );
                   },

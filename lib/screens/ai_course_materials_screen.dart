@@ -264,24 +264,29 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   if (item.moduleName != null && item.moduleName!.isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEEF2FF),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: const Color(0xFFC7D2FE)),
-                                      ),
-                                      child: Text(
-                                        item.moduleName!,
-                                        style: const TextStyle(
-                                          color: Color(0xFF4338CA),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEEF2FF),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: const Color(0xFFC7D2FE)),
+                                        ),
+                                        child: Text(
+                                          item.moduleName!,
+                                          style: const TextStyle(
+                                            color: Color(0xFF4338CA),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     )
                                   else
                                     const SizedBox.shrink(),
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(

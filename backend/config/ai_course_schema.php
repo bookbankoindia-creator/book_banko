@@ -78,6 +78,15 @@ function ensureAiCourseTableExists(PDO $db): void {
                 'display_order' => 1,
             ],
             [
+                'standard_number' => 6,
+                'title' => 'Human vs Machine Intelligence & Fun Logic Games',
+                'module_name' => 'Module 2 • Smart Machines',
+                'description' => 'Comparing human brain vs computer processing, pattern recognition, and decision puzzles.',
+                'page_count' => 18,
+                'file_size_mb' => 2.30,
+                'display_order' => 2,
+            ],
+            [
                 'standard_number' => 7,
                 'title' => 'Computational Thinking & AI Problem Solving',
                 'module_name' => 'Module 1 • Algorithms & Logic',

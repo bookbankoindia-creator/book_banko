@@ -403,6 +403,7 @@ class DashboardOption {
     DashboardOption(title: 'Paper Sets', slug: 'paper_sets', icon: Icons.assignment_rounded, route: '/paper_sets'),
     DashboardOption(title: 'Blueprint', slug: 'blueprint', icon: Icons.architecture_rounded, route: '/blueprint'),
     DashboardOption(title: 'M.IMP', slug: 'mimp', icon: Icons.star_rounded, route: '/mimp'),
+    DashboardOption(title: 'AI Course', slug: 'ai_course', icon: Icons.psychology_rounded, route: '/ai_course_materials'),
   ];
 }
 
