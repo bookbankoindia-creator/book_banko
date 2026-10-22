@@ -20,6 +20,14 @@ $totalSubjects = (int)$db->query("SELECT COUNT(*) FROM subjects WHERE status = '
 $totalChapters = (int)$db->query("SELECT COUNT(*) FROM chapters_content WHERE status = 'active'")->fetchColumn();
 $totalBanners = (int)$db->query("SELECT COUNT(*) FROM banners WHERE status = 'active'")->fetchColumn();
 
+// Fetch registered student count
+$totalStudents = 0;
+try {
+    $totalStudents = (int)$db->query("SELECT COUNT(*) FROM app_users")->fetchColumn();
+} catch (Exception $e) {
+    $totalStudents = 0;
+}
+
 // Calculate total PDF storage size from active chapters
 $storageBytes = 0;
 $activeFiles = $db->query("SELECT pdf_file_path, file_size_mb FROM chapters_content WHERE status = 'active'")->fetchAll();
@@ -133,6 +141,26 @@ include __DIR__ . '/../../includes/header.php';
             <div class="mt-3 d-flex align-items-center text-muted small">
                 <a href="<?= url('modules/chapters/index.php') ?>" class="text-decoration-none text-primary fw-semibold">
                     Manage Chapters <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registered Students Metric -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-value text-primary"><?= number_format($totalStudents) ?></div>
+                    <div class="stat-label">Registered Students</div>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-blue">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3 d-flex align-items-center text-muted small">
+                <a href="<?= url('modules/students/index.php') ?>" class="text-decoration-none text-primary fw-semibold">
+                    View All Students <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
         </div>

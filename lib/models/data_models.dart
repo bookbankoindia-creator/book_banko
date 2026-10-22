@@ -783,6 +783,110 @@ class AiCourseMaterialModel {
   }
 }
 
+/// Registered Student / User Model
+class UserModel {
+  final int id;
+  final String username;
+  final String email;
+  final String? password;
+  final String schoolName;
+  final String city;
+  final String district;
+  final String state;
+  final bool acknowledged;
+  final String? board;
+  final String? medium;
+  final int? standard;
+  final DateTime? createdAt;
 
+  const UserModel({
+    required this.id,
+    required this.username,
+    required this.email,
+    this.password,
+    required this.schoolName,
+    required this.city,
+    required this.district,
+    required this.state,
+    this.acknowledged = true,
+    this.board,
+    this.medium,
+    this.standard,
+    this.createdAt,
+  });
 
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      password: json['password']?.toString(),
+      schoolName: json['school_name']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      district: json['district']?.toString() ?? '',
+      state: json['state']?.toString() ?? '',
+      acknowledged: json['acknowledged'] == null ||
+          json['acknowledged'] == 1 ||
+          json['acknowledged'] == true ||
+          json['acknowledged'] == '1',
+      board: json['board']?.toString(),
+      medium: json['medium']?.toString(),
+      standard: json['standard'] != null
+          ? int.tryParse(json['standard'].toString())
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+    );
+  }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      if (password != null && password!.isNotEmpty) 'password': password,
+      'school_name': schoolName,
+      'city': city,
+      'district': district,
+      'state': state,
+      'acknowledged': acknowledged ? 1 : 0,
+      'board': board,
+      'medium': medium,
+      'standard': standard,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
+
+  UserModel copyWith({
+    int? id,
+    String? username,
+    String? email,
+    String? password,
+    String? schoolName,
+    String? city,
+    String? district,
+    String? state,
+    bool? acknowledged,
+    String? board,
+    String? medium,
+    int? standard,
+    DateTime? createdAt,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      schoolName: schoolName ?? this.schoolName,
+      city: city ?? this.city,
+      district: district ?? this.district,
+      state: state ?? this.state,
+      acknowledged: acknowledged ?? this.acknowledged,
+      board: board ?? this.board,
+      medium: medium ?? this.medium,
+      standard: standard ?? this.standard,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}

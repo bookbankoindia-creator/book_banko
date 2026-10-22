@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
+import '../widgets/shimmer_loading.dart';
 
 class HigherEducationScreen extends StatefulWidget {
   final String? initialCourseName;
@@ -19,15 +22,22 @@ class HigherEducationScreen extends StatefulWidget {
 }
 
 class _HigherEducationScreenState extends State<HigherEducationScreen> {
+  List<HigherEducationMaterialModel>? _cachedMaterials;
   late Future<List<HigherEducationMaterialModel>> _materialsFuture;
 
   @override
   void initState() {
     super.initState();
+    _cachedMaterials = ApiService.getCachedHigherEducationMaterials(
+      courseName: widget.initialCourseName,
+    );
     _loadMaterials();
   }
 
   void _loadMaterials() {
+    _cachedMaterials ??= ApiService.getCachedHigherEducationMaterials(
+      courseName: widget.initialCourseName,
+    );
     _materialsFuture = ApiService.fetchHigherEducationMaterials(
       courseName: widget.initialCourseName,
     );
@@ -35,7 +45,10 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadMaterials();
+      _materialsFuture = ApiService.fetchHigherEducationMaterials(
+        courseName: widget.initialCourseName,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -61,40 +74,42 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
-      appBar: AppBar(
-        title: const Text(
-          'Higher Education',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const BookBankoAppBar(
+        title: 'Higher Education',
+        subtitle: 'University & Degree Course Materials',
+        showBackButton: true,
       ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Text(
+                'Degree, Diploma & Engineering Books',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
             // Material List Content
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refresh,
-                color: AppColors.primaryBlue,
+                color: AppColors.primary,
                 child: FutureBuilder<List<HigherEducationMaterialModel>>(
+                  initialData: _cachedMaterials,
                   future: _materialsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+                    final materials = snapshot.data ?? _cachedMaterials ?? [];
+                    if (materials.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: ShimmerListPlaceholder(itemCount: 6),
                       );
                     }
-
-                    final materials = snapshot.data ?? [];
 
                     if (materials.isEmpty) {
                       return ListView(
@@ -108,32 +123,32 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(20),
+                                    width: 64,
+                                    height: 64,
                                     decoration: const BoxDecoration(
-                                      color: AppColors.lightBlueBg,
+                                      color: Color(0xFFF1F5F9),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
-                                      Icons.picture_as_pdf_rounded,
-                                      size: 48,
-                                      color: AppColors.primaryBlue,
+                                      Icons.account_balance_outlined,
+                                      size: 32,
+                                      color: AppColors.textMuted,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  const Text(
-                                    'No Higher Education Materials uploaded yet',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 17,
+                                  Text(
+                                    'No Higher Education Materials Found',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Upload PDFs for Higher Education in your Book Banko Admin Panel to display here.',
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Upload college and degree resources in your Admin Panel to display here.',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
@@ -143,10 +158,6 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Refresh'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                    ),
                                   ),
                                 ],
                               ),
@@ -158,7 +169,7 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
 
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       itemCount: materials.length,
                       itemBuilder: (context, index) {
                         final item = materials[index];
@@ -169,72 +180,97 @@ class _HigherEducationScreenState extends State<HigherEducationScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () => _openPdf(item, appState),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(18),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: AppColors.surfaceWhite,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.borderLight),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: AppColors.borderLight, width: 1.2),
                                   boxShadow: const [AppShadows.subtleShadow],
                                 ),
                                 child: Row(
                                   children: [
-                                    // PDF Icon Badge
+                                    // University Icon Badge
                                     Container(
-                                      width: 44,
-                                      height: 44,
+                                      width: 46,
+                                      height: 46,
                                       decoration: BoxDecoration(
-                                        color: AppColors.lightBlueBg,
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: AppColors.higherEduBg,
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: const Center(
                                         child: Icon(
-                                          Icons.picture_as_pdf_rounded,
-                                          color: AppColors.primaryBlue,
+                                          Icons.account_balance_rounded,
+                                          color: AppColors.higherEduNavy,
                                           size: 24,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 14),
 
-                                    // Material Title
+                                    // Material Details
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.title,
-                                            style: const TextStyle(
+                                            style: GoogleFonts.plusJakartaSans(
                                               fontSize: 15,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w700,
                                               color: AppColors.textPrimary,
+                                              height: 1.25,
                                             ),
                                           ),
-                                          if (item.courseName != null && item.courseName!.isNotEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 3.0),
-                                              child: Text(
-                                                item.courseName!,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppColors.primaryBlue,
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (item.courseName != null) ...[
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.higherEduNavy.withValues(alpha: 0.1),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    item.courseName!,
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: AppColors.higherEduNavy,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
+                                                const SizedBox(width: 8),
+                                              ],
+                                              if (item.pageCount > 0)
+                                                Text(
+                                                  '${item.pageCount} Pages',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                     ),
 
-                                    // Chevron Icon
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: AppColors.textSecondary,
-                                      size: 24,
+                                    // Chevron / Open Button
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF1F5F9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: AppColors.textSecondary,
+                                        size: 20,
+                                      ),
                                     ),
                                   ],
                                 ),

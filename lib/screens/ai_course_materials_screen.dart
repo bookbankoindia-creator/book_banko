@@ -7,6 +7,8 @@ import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
+import '../widgets/shimmer_loading.dart';
 
 class AiCourseMaterialsScreen extends StatefulWidget {
   final int standardNumber;
@@ -23,6 +25,7 @@ class AiCourseMaterialsScreen extends StatefulWidget {
 }
 
 class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
+  List<AiCourseMaterialModel>? _cachedMaterials;
   late Future<List<AiCourseMaterialModel>> _materialsFuture;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -30,6 +33,10 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
   @override
   void initState() {
     super.initState();
+    _cachedMaterials = ApiService.getCachedAiCourseMaterials(
+      standardNumber: widget.standardNumber,
+      search: _searchQuery,
+    );
     _loadMaterials();
   }
 
@@ -40,6 +47,10 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
   }
 
   void _loadMaterials() {
+    _cachedMaterials ??= ApiService.getCachedAiCourseMaterials(
+      standardNumber: widget.standardNumber,
+      search: _searchQuery,
+    );
     _materialsFuture = ApiService.fetchAiCourseMaterials(
       standardNumber: widget.standardNumber,
       search: _searchQuery,
@@ -48,7 +59,11 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadMaterials();
+      _materialsFuture = ApiService.fetchAiCourseMaterials(
+        standardNumber: widget.standardNumber,
+        search: _searchQuery,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -97,36 +112,9 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AI Course • $displayName',
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Curriculum Notes & Study Material',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: BookBankoAppBar(
+        title: 'AI Course • $displayName',
+        subtitle: 'Curriculum Notes & Study Material',
       ),
       body: SafeArea(
         child: Column(
@@ -168,15 +156,13 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
                 onRefresh: _refresh,
                 color: AppColors.primaryBlue,
                 child: FutureBuilder<List<AiCourseMaterialModel>>(
+                  initialData: _cachedMaterials,
                   future: _materialsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
-                      );
+                    final materials = snapshot.data ?? _cachedMaterials ?? [];
+                    if (materials.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const ShimmerListPlaceholder(itemCount: 4);
                     }
-
-                    final materials = snapshot.data ?? [];
 
                     if (materials.isEmpty) {
                       return ListView(
@@ -190,14 +176,14 @@ class _AiCourseMaterialsScreenState extends State<AiCourseMaterialsScreen> {
                                 Container(
                                   width: 80,
                                   height: 80,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEF2FF),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEFF6FF),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
                                     Icons.psychology_rounded,
                                     size: 40,
-                                    color: Color(0xFF6366F1),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                                 const SizedBox(height: 16),

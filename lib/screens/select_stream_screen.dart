@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
 import '../models/data_models.dart';
@@ -7,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/book_banko_app_bar.dart';
 import '../widgets/book_banko_button.dart';
 import '../widgets/selection_tile.dart';
+import '../widgets/shimmer_loading.dart';
 
 class SelectStreamScreen extends StatefulWidget {
   const SelectStreamScreen({super.key});
@@ -16,6 +18,7 @@ class SelectStreamScreen extends StatefulWidget {
 }
 
 class _SelectStreamScreenState extends State<SelectStreamScreen> {
+  List<StreamModel>? _cachedStreams;
   Future<List<StreamModel>>? _streamsFuture;
   String? _currentBoard;
   String? _currentMedium;
@@ -42,6 +45,14 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
 
   void _loadStreams() {
     if (_currentBoard != null && _currentMedium != null && _currentStandard != null) {
+      final cached = ApiService.getCachedStreams(
+        boardCode: _currentBoard!,
+        mediumCode: _currentMedium!,
+        standardNumber: _currentStandard!,
+      );
+      if (cached != null && cached.isNotEmpty) {
+        _cachedStreams = cached;
+      }
       _streamsFuture = ApiService.fetchStreams(
         boardCode: _currentBoard!,
         mediumCode: _currentMedium!,
@@ -52,7 +63,14 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadStreams();
+      if (_currentBoard != null && _currentMedium != null && _currentStandard != null) {
+        _streamsFuture = ApiService.fetchStreams(
+          boardCode: _currentBoard!,
+          mediumCode: _currentMedium!,
+          standardNumber: _currentStandard!,
+          forceRefresh: true,
+        );
+      }
     });
   }
 
@@ -62,66 +80,74 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
     final activeStd = appState.activeStandardNumber;
 
     return Scaffold(
+      backgroundColor: AppColors.canvasBg,
       appBar: const BookBankoAppBar(title: 'Select Stream'),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Select Stream for Standard $activeStd',
-                style: const TextStyle(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
+                  letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 'Choose your academic stream for ${appState.selectedBoard} (${appState.selectedMediumName}).',
-                style: const TextStyle(
-                  fontSize: 14,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
                   color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Expanded(
                 child: FutureBuilder<List<StreamModel>>(
+                  initialData: _cachedStreams,
                   future: _streamsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
-                      );
+                    final streams = snapshot.data ?? _cachedStreams ?? [];
+                    if (streams.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const ShimmerListPlaceholder(itemCount: 3);
                     }
-
-                    final streams = snapshot.data ?? [];
 
                     if (streams.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.school_outlined,
-                              size: 56,
-                              color: AppColors.textMuted,
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF1F5F9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.school_outlined,
+                                size: 32,
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
+                            const SizedBox(height: 16),
+                            Text(
                               'No streams found for this standard.',
-                              style: TextStyle(
-                                fontSize: 16,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 17,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Add streams in your Admin Panel under Streams Management.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
                               ),
@@ -137,11 +163,13 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
                       );
                     }
 
-                    // Auto-select first stream if current selectedStreamModel is not set or not in list
-                    if (appState.selectedStreamModel == null ||
-                        !streams.any((s) => s.id == appState.selectedStreamModel!.id)) {
+                    // Auto-select first stream if current not set
+                    final selectedStreamSlug = appState.selectedStreamSlug;
+                    final hasValidSelection = streams.any((s) => s.slug == selectedStreamSlug);
+
+                    if (!hasValidSelection && streams.isNotEmpty) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted && streams.isNotEmpty) {
+                        if (mounted) {
                           appState.selectStreamModel(streams.first);
                         }
                       });
@@ -149,20 +177,25 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
 
                     return RefreshIndicator(
                       onRefresh: _refresh,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primary,
                       child: ListView.builder(
-                        itemCount: streams.length,
                         physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: streams.length,
                         itemBuilder: (context, index) {
                           final stream = streams[index];
-                          final isSelected = (appState.selectedStreamModel?.id == stream.id) ||
-                              (appState.selectedStreamSlug?.toLowerCase() == stream.slug.toLowerCase()) ||
-                              (appState.selectedStreamSlug?.toLowerCase() == stream.name.toLowerCase());
+                          final isSelected = stream.slug == appState.selectedStreamSlug;
+                          final icon = _getStreamIcon(stream.slug);
+                          final tag = _getStreamTag(stream.slug);
 
                           return SelectionTile(
                             title: stream.name,
+                            subtitle: stream.description ?? '${stream.name} Stream Syllabus',
+                            tag: tag,
+                            icon: icon,
                             isSelected: isSelected,
-                            onTap: () => appState.selectStreamModel(stream),
+                            onTap: () {
+                              appState.selectStreamModel(stream);
+                            },
                           );
                         },
                       ),
@@ -172,7 +205,9 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
               ),
               const SizedBox(height: 12),
               BookBankoButton(
-                text: 'Continue',
+                text: 'Done & Go to Home',
+                variant: ButtonVariant.gradient,
+                icon: Icons.check_circle_rounded,
                 onPressed: () async {
                   await appState.completeOnboarding();
                   if (context.mounted) {
@@ -183,7 +218,6 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
                     );
                   }
                 },
-                icon: Icons.arrow_forward_rounded,
               ),
             ],
           ),
@@ -191,5 +225,20 @@ class _SelectStreamScreenState extends State<SelectStreamScreen> {
       ),
     );
   }
-}
 
+  static IconData _getStreamIcon(String slug) {
+    final lower = slug.toLowerCase();
+    if (lower.contains('sci')) return Icons.biotech_rounded;
+    if (lower.contains('comm')) return Icons.trending_up_rounded;
+    if (lower.contains('art')) return Icons.palette_rounded;
+    return Icons.school_rounded;
+  }
+
+  static String? _getStreamTag(String slug) {
+    final lower = slug.toLowerCase();
+    if (lower.contains('sci')) return 'Science Group';
+    if (lower.contains('comm')) return 'Commerce Group';
+    if (lower.contains('art')) return 'Arts & Humanities';
+    return null;
+  }
+}

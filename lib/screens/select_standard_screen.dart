@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
@@ -8,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/book_banko_app_bar.dart';
 import '../widgets/book_banko_button.dart';
 import '../widgets/selection_tile.dart';
+import '../widgets/shimmer_loading.dart';
 
 class SelectStandardScreen extends StatefulWidget {
   const SelectStandardScreen({super.key});
@@ -17,6 +19,7 @@ class SelectStandardScreen extends StatefulWidget {
 }
 
 class _SelectStandardScreenState extends State<SelectStandardScreen> {
+  List<StandardModel>? _cachedStandards;
   Future<List<StandardModel>>? _standardsFuture;
   String? _lastBoard;
   String? _lastMedium;
@@ -24,6 +27,10 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
   void _loadStandards(String boardCode, String mediumCode) {
     _lastBoard = boardCode;
     _lastMedium = mediumCode;
+    _cachedStandards = ApiService.getCachedStandards(
+      boardCode: boardCode,
+      mediumCode: mediumCode,
+    );
     _standardsFuture = ApiService.fetchStandards(
       boardCode: boardCode,
       mediumCode: mediumCode,
@@ -32,7 +39,11 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
 
   Future<void> _refreshStandards(String boardCode, String mediumCode) async {
     setState(() {
-      _loadStandards(boardCode, mediumCode);
+      _standardsFuture = ApiService.fetchStandards(
+        boardCode: boardCode,
+        mediumCode: mediumCode,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -47,8 +58,9 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.canvasBg,
       appBar: const BookBankoAppBar(
-        title: 'Select Standard',
+        title: 'Class / Standard',
         showBackButton: true,
       ),
       body: SafeArea(
@@ -57,39 +69,60 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Step Progress Pill
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'STEP 3 OF 3',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               Text(
-                'Choose Standard for ${appState.selectedBoard}',
-                style: const TextStyle(
+                'Choose Your Standard',
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
+                  letterSpacing: -0.4,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Medium: ${appState.selectedMediumName}',
-                style: const TextStyle(
-                  fontSize: 14,
+                '${appState.selectedBoard} • ${appState.selectedMediumName}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: AppColors.primaryBlue,
                 ),
               ),
               const SizedBox(height: 20),
               Expanded(
                 child: FutureBuilder<List<StandardModel>>(
+                  initialData: _cachedStandards,
                   future: _standardsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
-                      );
+                    final standards = snapshot.data ?? _cachedStandards ?? [];
+                    if (standards.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const ShimmerListPlaceholder(itemCount: 5);
                     }
-
-                    final standards = snapshot.data ?? [];
                     if (standards.isEmpty) {
                       return RefreshIndicator(
                         onRefresh: () => _refreshStandards(appState.selectedBoard, appState.selectedMedium),
-                        color: AppColors.primaryBlue,
+                        color: AppColors.primary,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
@@ -97,25 +130,33 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
                             Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(
-                                    Icons.school_outlined,
-                                    size: 64,
-                                    color: AppColors.textMuted,
+                                children: [
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.school_outlined,
+                                      size: 32,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
-                                  SizedBox(height: 16),
+                                  const SizedBox(height: 16),
                                   Text(
                                     'No Standards Found',
-                                    style: TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 6),
                                   Text(
                                     'Add standards in your Admin Panel to display them here.',
-                                    style: TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
@@ -129,7 +170,7 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
                       );
                     }
 
-                    // Auto-select first standard if none selected or selected standard not in list
+                    // Auto-select first standard if none selected
                     if (appState.activeStandardNumber == 0 ||
                         !standards.any((s) => s.number == appState.activeStandardNumber)) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -141,19 +182,21 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
 
                     return RefreshIndicator(
                       onRefresh: () => _refreshStandards(appState.selectedBoard, appState.selectedMedium),
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primary,
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: standards.length,
                         itemBuilder: (context, index) {
                           final std = standards[index];
-                          final isSelected =
-                              appState.activeStandardNumber == std.number;
+                          final isSelected = appState.activeStandardNumber == std.number;
+                          final isBoardExam = std.number == 10 || std.number == 12;
+
                           return SelectionTile(
                             title: std.name,
+                            tag: isBoardExam ? 'Board Exam' : null,
+                            icon: Icons.menu_book_rounded,
                             isSelected: isSelected,
                             onTap: () {
-                              // Select only this standard for the home screen
                               appState.setSingleStandard(std.number);
                             },
                           );
@@ -166,6 +209,8 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
               const SizedBox(height: 12),
               BookBankoButton(
                 text: 'Continue',
+                variant: ButtonVariant.gradient,
+                icon: Icons.check_circle_rounded,
                 onPressed: () async {
                   final activeStd = appState.activeStandardNumber;
                   if (activeStd == 11 || activeStd == 12) {

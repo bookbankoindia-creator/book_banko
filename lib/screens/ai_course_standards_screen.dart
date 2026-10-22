@@ -6,6 +6,7 @@ import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
 import 'ai_course_materials_screen.dart';
 
 class AiCourseStandardsScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class AiCourseStandardsScreen extends StatefulWidget {
 }
 
 class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
+  List<StandardModel>? _cachedStandards;
   late Future<List<StandardModel>> _standardsFuture;
 
   @override
@@ -26,6 +28,10 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
 
   void _loadStandards() {
     final appState = Provider.of<BookBankoAppState>(context, listen: false);
+    _cachedStandards = ApiService.getCachedStandards(
+      boardCode: appState.selectedBoard,
+      mediumCode: appState.selectedMedium,
+    );
     _standardsFuture = ApiService.fetchStandards(
       boardCode: appState.selectedBoard,
       mediumCode: appState.selectedMedium,
@@ -33,8 +39,13 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
   }
 
   Future<void> _refresh() async {
+    final appState = Provider.of<BookBankoAppState>(context, listen: false);
     setState(() {
-      _loadStandards();
+      _standardsFuture = ApiService.fetchStandards(
+        boardCode: appState.selectedBoard,
+        mediumCode: appState.selectedMedium,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -56,22 +67,10 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
-      appBar: AppBar(
-        title: Text(
-          'AI Course Standards',
-          style: GoogleFonts.plusJakartaSans(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const BookBankoAppBar(
+        title: 'AI Course Standards',
+        subtitle: 'Coding & Robotics Curriculum',
+        showBackButton: true,
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -109,7 +108,7 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                         height: 56,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -129,14 +128,14 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                                color: AppColors.primary.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.4)),
+                                border: Border.all(color: AppColors.primaryBorder.withValues(alpha: 0.4)),
                               ),
                               child: const Text(
                                 'AI & CODING CURRICULUM',
                                 style: TextStyle(
-                                  color: Color(0xFFA5B4FC),
+                                  color: Color(0xFF93C5FD),
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
@@ -183,9 +182,11 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
 
                 // FutureBuilder for standards list
                 FutureBuilder<List<StandardModel>>(
+                  initialData: _cachedStandards,
                   future: _standardsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    var standards = snapshot.data ?? _cachedStandards ?? [];
+                    if (standards.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 40),
@@ -194,7 +195,6 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                       );
                     }
 
-                    var standards = snapshot.data ?? [];
                     if (standards.isEmpty) {
                       // Fallback standards 6 to 12
                       standards = List.generate(
@@ -228,7 +228,7 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: isUserStandard
-                                      ? const Color(0xFF6366F1)
+                                      ? AppColors.primary
                                       : AppColors.borderLight,
                                   width: isUserStandard ? 1.8 : 1,
                                 ),
@@ -248,8 +248,8 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
                                         colors: isUserStandard
-                                            ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6)]
-                                            : [AppColors.primaryBlue, AppColors.primaryDark],
+                                            ? [AppColors.primary, AppColors.primaryBlue]
+                                            : [const Color(0xFF64748B), const Color(0xFF475569)],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),

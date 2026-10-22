@@ -16,9 +16,13 @@ class BookBankoAppState extends ChangeNotifier {
   String? _selectedStreamName;
   SubjectModel? _selectedSubject;
   ChapterModel? _selectedChapter;
+  UserModel? _currentUser;
 
   bool _isOnboarded = false;
   bool _isPreferencesLoaded = false;
+
+  UserModel? get currentUser => _currentUser;
+  bool get isLoggedIn => _currentUser != null;
 
   String get selectedBoard => _selectedBoard;
   String get selectedMedium => _selectedMedium;
@@ -43,6 +47,9 @@ class BookBankoAppState extends ChangeNotifier {
   /// Loads saved board, medium, and standard from SharedPreferences
   Future<bool> loadSavedPreferences() async {
     try {
+      // Load user profile
+      _currentUser = await PreferenceService.getUserData();
+
       final data = await PreferenceService.getAllPreferences();
       final hasCompleted = data['isOnboarded'] as bool? ?? false;
 
@@ -104,6 +111,12 @@ class BookBankoAppState extends ChangeNotifier {
     return false;
   }
 
+  void setCurrentUser(UserModel user) {
+    _currentUser = user;
+    PreferenceService.saveUserData(user);
+    notifyListeners();
+  }
+
   void selectModule({required String slug, required String title}) {
     _selectedModuleSlug = slug;
     _selectedModuleTitle = title;
@@ -113,6 +126,10 @@ class BookBankoAppState extends ChangeNotifier {
   void selectBoard(String board) {
     _selectedBoard = board;
     PreferenceService.saveBoard(board);
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(board: board);
+      PreferenceService.saveUserData(_currentUser!);
+    }
     notifyListeners();
   }
 
@@ -125,6 +142,10 @@ class BookBankoAppState extends ChangeNotifier {
           '${mediumCode.substring(0, 1).toUpperCase()}${mediumCode.substring(1)} Medium';
     }
     PreferenceService.saveMedium(_selectedMedium, _selectedMediumName);
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(medium: mediumCode);
+      PreferenceService.saveUserData(_currentUser!);
+    }
     notifyListeners();
   }
 
@@ -135,6 +156,10 @@ class BookBankoAppState extends ChangeNotifier {
     _activeStandardNumber = number;
     PreferenceService.saveActiveStandard(number);
     PreferenceService.saveMyStandards(_myStandards);
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(standard: number);
+      PreferenceService.saveUserData(_currentUser!);
+    }
     notifyListeners();
   }
 
@@ -145,6 +170,10 @@ class BookBankoAppState extends ChangeNotifier {
       PreferenceService.saveMyStandards(_myStandards);
     }
     PreferenceService.saveActiveStandard(number);
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(standard: number);
+      PreferenceService.saveUserData(_currentUser!);
+    }
     notifyListeners();
   }
 

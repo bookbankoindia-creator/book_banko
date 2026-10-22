@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'models/app_state.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/select_board_screen.dart';
 import 'screens/select_medium_screen.dart';
 import 'screens/select_standard_screen.dart';
@@ -17,11 +19,15 @@ import 'screens/study_material_screen.dart';
 import 'screens/competitive_exams_screen.dart';
 import 'screens/higher_education_screen.dart';
 import 'screens/ai_course_standards_screen.dart';
+import 'screens/profile_screen.dart';
 import 'services/ad_service.dart';
+import 'services/api_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AdService.instance.initialize();
+  await ApiService.init();
+  // Initialize AdService asynchronously without blocking app launch
+  AdService.instance.initialize();
   runApp(
     ChangeNotifierProvider(
       create: (_) => BookBankoAppState(),
@@ -42,6 +48,7 @@ class BookBankoApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
         '/select_board': (context) => const SelectBoardScreen(),
         '/select_medium': (context) => const SelectMediumScreen(),
         '/select_standard': (context) => const SelectStandardScreen(),
@@ -56,6 +63,7 @@ class BookBankoApp extends StatelessWidget {
         '/competitive_exams': (context) => const CompetitiveExamsScreen(),
         '/higher_education': (context) => const HigherEducationScreen(),
         '/ai_course_standards': (context) => const AiCourseStandardsScreen(),
+        '/profile': (context) => const ProfileScreen(),
       },
     );
   }

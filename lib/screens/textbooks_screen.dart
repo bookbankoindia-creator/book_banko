@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
+import '../widgets/shimmer_loading.dart';
 import '../widgets/subject_tile.dart';
 
 class TextbooksScreen extends StatefulWidget {
@@ -15,6 +18,7 @@ class TextbooksScreen extends StatefulWidget {
 }
 
 class _TextbooksScreenState extends State<TextbooksScreen> {
+  List<SubjectModel>? _cachedSubjects;
   Future<List<SubjectModel>>? _subjectsFuture;
   String? _currentBoard;
   String? _currentMedium;
@@ -45,6 +49,18 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
 
   void _loadSubjects() {
     if (_currentBoard != null && _currentMedium != null && _currentStandard != null) {
+      // 1. Immediately grab cached subjects for 0ms instant display!
+      final cached = ApiService.getCachedSubjects(
+        boardCode: _currentBoard!,
+        standardNumber: _currentStandard!,
+        mediumCode: _currentMedium!,
+        streamSlug: _currentStreamSlug,
+      );
+      if (cached != null && cached.isNotEmpty) {
+        _cachedSubjects = cached;
+      }
+
+      // 2. Fetch fresh data (stale-while-revalidate)
       _subjectsFuture = ApiService.fetchSubjects(
         boardCode: _currentBoard!,
         standardNumber: _currentStandard!,
@@ -56,7 +72,13 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadSubjects();
+      _subjectsFuture = ApiService.fetchSubjects(
+        boardCode: _currentBoard!,
+        standardNumber: _currentStandard!,
+        mediumCode: _currentMedium!,
+        streamSlug: _currentStreamSlug,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -69,25 +91,15 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
     final streamName = (activeStd == 11 || activeStd == 12) ? appState.selectedStreamName : null;
 
     final bannerText = streamName != null && streamName.isNotEmpty
-        ? '$board • ${appState.selectedMediumName} • $streamName • $moduleTitle'
-        : '$board • ${appState.selectedMediumName} • $moduleTitle';
+        ? '$board • ${appState.selectedMediumName} • $streamName'
+        : '$board • ${appState.selectedMediumName}';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '$moduleTitle - Standard $activeStd',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: AppColors.canvasBg,
+      appBar: BookBankoAppBar(
+        title: '$moduleTitle - Std $activeStd',
+        subtitle: bannerText,
+        showBackButton: true,
       ),
       body: SafeArea(
         child: Padding(
@@ -95,38 +107,30 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.lightBlueBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  bannerText,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryBlue,
-                  ),
+              Text(
+                'Select a Subject to Read',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Expanded(
                 child: FutureBuilder<List<SubjectModel>>(
+                  initialData: _cachedSubjects,
                   future: _subjectsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
-                      );
-                    }
+                    final subjects = snapshot.data ?? _cachedSubjects ?? [];
 
-                    final subjects = snapshot.data ?? [];
+                    if (subjects.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const ShimmerListPlaceholder(itemCount: 6);
+                    }
 
                     if (subjects.isEmpty) {
                       return RefreshIndicator(
                         onRefresh: _refresh,
-                        color: AppColors.primaryBlue,
+                        color: AppColors.primary,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
@@ -135,25 +139,33 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
-                                    Icons.menu_book_outlined,
-                                    size: 56,
-                                    color: AppColors.textMuted,
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.menu_book_outlined,
+                                      size: 32,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  const Text(
+                                  const SizedBox(height: 16),
+                                  Text(
                                     'No Subjects Found',
-                                    style: TextStyle(
-                                      fontSize: 16,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'No subjects found for Standard $activeStd (${appState.selectedMediumName}).\nAdd them in the Admin Panel to display here.',
+                                    'No subjects are currently listed for Standard $activeStd ($bannerText).',
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
@@ -163,10 +175,6 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Refresh'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                    ),
                                   ),
                                 ],
                               ),
@@ -178,7 +186,7 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
 
                     return RefreshIndicator(
                       onRefresh: _refresh,
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primary,
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: subjects.length,
@@ -187,8 +195,19 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
                           return SubjectTile(
                             title: subject.name,
                             icon: subject.icon,
+                            chapterCount: subject.chapterCount > 0 ? subject.chapterCount : null,
                             onTap: () {
                               appState.selectSubject(subject);
+                              // Pre-fetch chapters so ChaptersScreen opens in 0ms!
+                              final subjectDbId = subject.databaseId > 0
+                                  ? subject.databaseId
+                                  : int.tryParse(subject.id);
+                              if (subjectDbId != null && subjectDbId > 0) {
+                                ApiService.fetchChapters(
+                                  subjectId: subjectDbId,
+                                  moduleSlug: appState.selectedModuleSlug,
+                                );
+                              }
                               Navigator.pushNamed(context, '/chapters');
                             },
                           );

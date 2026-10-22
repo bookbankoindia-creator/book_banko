@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/data_models.dart';
 
 class PreferenceService {
   static const String _keyBoard = 'book_banko_selected_board';
@@ -10,6 +11,17 @@ class PreferenceService {
   static const String _keyStreamSlug = 'book_banko_stream_slug';
   static const String _keyStreamName = 'book_banko_stream_name';
   static const String _keyIsOnboarded = 'book_banko_is_onboarded';
+
+  // User Profile / Login Keys
+  static const String _keyIsLoggedIn = 'book_banko_is_logged_in';
+  static const String _keyUserId = 'book_banko_user_id';
+  static const String _keyUserName = 'book_banko_user_name';
+  static const String _keyUserEmail = 'book_banko_user_email';
+  static const String _keyUserSchool = 'book_banko_user_school';
+  static const String _keyUserCity = 'book_banko_user_city';
+  static const String _keyUserDistrict = 'book_banko_user_district';
+  static const String _keyUserState = 'book_banko_user_state';
+  static const String _keyUserAcknowledged = 'book_banko_user_acknowledged';
 
   /// Save the selected board code (e.g. 'GSEB', 'CBSE')
   static Future<void> saveBoard(String board) async {
@@ -155,6 +167,65 @@ class PreferenceService {
     }
   }
 
+  /// Save registered student / user profile
+  static Future<void> saveUserData(UserModel user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyIsLoggedIn, true);
+      await prefs.setInt(_keyUserId, user.id);
+      await prefs.setString(_keyUserName, user.username);
+      await prefs.setString(_keyUserEmail, user.email);
+      await prefs.setString(_keyUserSchool, user.schoolName);
+      await prefs.setString(_keyUserCity, user.city);
+      await prefs.setString(_keyUserDistrict, user.district);
+      await prefs.setString(_keyUserState, user.state);
+      await prefs.setBool(_keyUserAcknowledged, user.acknowledged);
+    } catch (e) {
+      debugPrint('PreferenceService saveUserData error: $e');
+    }
+  }
+
+  /// Get saved user profile
+  static Future<UserModel?> getUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
+      final email = prefs.getString(_keyUserEmail);
+      if (!isLoggedIn || email == null || email.isEmpty) {
+        return null;
+      }
+
+      return UserModel(
+        id: prefs.getInt(_keyUserId) ?? 0,
+        username: prefs.getString(_keyUserName) ?? '',
+        email: email,
+        schoolName: prefs.getString(_keyUserSchool) ?? '',
+        city: prefs.getString(_keyUserCity) ?? '',
+        district: prefs.getString(_keyUserDistrict) ?? '',
+        state: prefs.getString(_keyUserState) ?? '',
+        acknowledged: prefs.getBool(_keyUserAcknowledged) ?? true,
+        board: prefs.getString(_keyBoard),
+        medium: prefs.getString(_keyMedium),
+        standard: prefs.getInt(_keyActiveStandard),
+      );
+    } catch (e) {
+      debugPrint('PreferenceService getUserData error: $e');
+      return null;
+    }
+  }
+
+  /// Check if user has completed initial registration
+  static Future<bool> isLoggedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final loggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
+      final email = prefs.getString(_keyUserEmail);
+      return loggedIn && email != null && email.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Clear all saved preferences
   static Future<void> clearAll() async {
     try {
@@ -167,6 +238,15 @@ class PreferenceService {
       await prefs.remove(_keyStreamSlug);
       await prefs.remove(_keyStreamName);
       await prefs.remove(_keyIsOnboarded);
+      await prefs.remove(_keyIsLoggedIn);
+      await prefs.remove(_keyUserId);
+      await prefs.remove(_keyUserName);
+      await prefs.remove(_keyUserEmail);
+      await prefs.remove(_keyUserSchool);
+      await prefs.remove(_keyUserCity);
+      await prefs.remove(_keyUserDistrict);
+      await prefs.remove(_keyUserState);
+      await prefs.remove(_keyUserAcknowledged);
     } catch (e) {
       debugPrint('PreferenceService clearAll error: $e');
     }

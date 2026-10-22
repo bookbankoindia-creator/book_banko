@@ -427,6 +427,26 @@ INSERT INTO `ai_course_materials` (`id`, `standard_number`, `title`, `module_nam
 (9, 12, 'Generative AI, Large Language Models & AI Capstone', 'Module 1 • Generative AI & LLMs', 'Transformers, Prompt Engineering, Large Language Models (LLMs), diffusion models, and developing end-to-end AI applications.', 52, 5.20, 1, 'active')
 ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);
 
+-- --------------------------------------------------------
+-- Table structure for registered student app users
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `app_users` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(150) NOT NULL,
+  `email` VARCHAR(150) NOT NULL,
+  `password` VARCHAR(255) DEFAULT NULL,
+  `school_name` VARCHAR(255) NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `district` VARCHAR(100) NOT NULL,
+  `state` VARCHAR(100) NOT NULL,
+  `acknowledged` TINYINT(1) DEFAULT 1,
+  `board` VARCHAR(50) DEFAULT NULL,
+  `medium` VARCHAR(50) DEFAULT NULL,
+  `standard` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 

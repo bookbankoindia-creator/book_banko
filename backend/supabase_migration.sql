@@ -401,6 +401,29 @@ DROP TRIGGER IF EXISTS trg_higher_education_materials_updated_at ON higher_educa
 CREATE TRIGGER trg_higher_education_materials_updated_at BEFORE UPDATE ON higher_education_materials
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Table: app_users (Registered Students & Logins)
+CREATE TABLE IF NOT EXISTS app_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    school_name VARCHAR(255) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    district VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    acknowledged SMALLINT DEFAULT 1,
+    board VARCHAR(50) DEFAULT NULL,
+    medium VARCHAR(50) DEFAULT NULL,
+    standard INT DEFAULT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
+
+DROP TRIGGER IF EXISTS trg_app_users_updated_at ON app_users;
+CREATE TRIGGER trg_app_users_updated_at BEFORE UPDATE ON app_users
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ==============================================================================
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================

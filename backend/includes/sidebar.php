@@ -119,6 +119,11 @@ function isActiveNav(string $keyword): string {
 
         <div class="sidebar-heading">App Management</div>
 
+        <a href="<?= url('modules/students/index.php') ?>" class="nav-link-bb <?= isActiveNav('/students/') ?>">
+            <i class="bi bi-people-fill text-primary"></i>
+            <span>Registered Students</span>
+        </a>
+
         <a href="<?= url('modules/banners/index.php') ?>" class="nav-link-bb <?= isActiveNav('/banners/') ?>">
             <i class="bi bi-megaphone-fill"></i>
             <span>Banners & Notices</span>

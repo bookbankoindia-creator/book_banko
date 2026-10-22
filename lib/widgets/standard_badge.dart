@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
 
@@ -25,50 +26,69 @@ class ActiveStandardBadge extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 112,
-              height: 112,
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 96,
+              height: 98,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryBlue : AppColors.surfaceWhite,
-                borderRadius: BorderRadius.circular(24),
-                border: isSelected
-                    ? Border.all(color: AppColors.darkBlue, width: 2)
-                    : Border.all(color: AppColors.borderLight, width: 1),
+                gradient: isSelected
+                    ? const LinearGradient(
+                        colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isSelected ? null : AppColors.surfaceWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? Colors.transparent : AppColors.borderLight,
+                  width: 1.2,
+                ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppColors.darkNavy.withValues(alpha: 0.3),
+                          color: AppColors.primary.withValues(alpha: 0.28),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
                       ]
-                    : [AppShadows.subtleShadow],
+                    : const [AppShadows.subtleShadow],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     '$standardNumber',
-                    style: TextStyle(
-                      fontSize: 36,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: isSelected
                           ? AppColors.surfaceWhite
                           : AppColors.textPrimary,
                       height: 1.1,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'STANDARD',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.surfaceWhite.withValues(alpha: 0.8)
-                          : AppColors.textSecondary,
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'STANDARD',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -85,8 +105,8 @@ class ActiveStandardBadge extends StatelessWidget {
             child: GestureDetector(
               onTap: onRemove,
               child: Container(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -94,17 +114,17 @@ class ActiveStandardBadge extends StatelessWidget {
                     color: AppColors.borderLight,
                     width: 1.5,
                   ),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Color(0x1A000000),
                       blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      offset: Offset(0, 2),
                     ),
                   ],
                 ),
                 child: const Icon(
                   Icons.close_rounded,
-                  size: 14,
+                  size: 13,
                   color: AppColors.error,
                 ),
               ),
@@ -126,38 +146,40 @@ class AddStandardButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           width: 80,
-          height: 112,
+          height: 98,
           decoration: BoxDecoration(
-            color: AppColors.lightBlueBg,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.primaryBorder, width: 1.5),
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primaryBorder,
+              width: 1.5,
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 32,
+                height: 32,
                 decoration: const BoxDecoration(
-                  color: AppColors.surfaceWhite,
+                  color: AppColors.containerLightBlue,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.add_rounded,
                   color: AppColors.primaryBlue,
-                  size: 22,
+                  size: 20,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'ADD',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
+              Text(
+                'Add Std',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.primaryBlue,
                 ),
               ),

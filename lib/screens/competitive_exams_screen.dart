@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
+import '../widgets/shimmer_loading.dart';
 
 class CompetitiveExamsScreen extends StatefulWidget {
   final String? initialExamSlug;
@@ -19,15 +22,22 @@ class CompetitiveExamsScreen extends StatefulWidget {
 }
 
 class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
+  List<CompetitiveExamMaterialModel>? _cachedMaterials;
   late Future<List<CompetitiveExamMaterialModel>> _materialsFuture;
 
   @override
   void initState() {
     super.initState();
+    _cachedMaterials = ApiService.getCachedCompetitiveExamMaterials(
+      examSlug: widget.initialExamSlug,
+    );
     _loadMaterials();
   }
 
   void _loadMaterials() {
+    _cachedMaterials ??= ApiService.getCachedCompetitiveExamMaterials(
+      examSlug: widget.initialExamSlug,
+    );
     _materialsFuture = ApiService.fetchCompetitiveExamMaterials(
       examSlug: widget.initialExamSlug,
     );
@@ -35,7 +45,10 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadMaterials();
+      _materialsFuture = ApiService.fetchCompetitiveExamMaterials(
+        examSlug: widget.initialExamSlug,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -61,40 +74,42 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
-      appBar: AppBar(
-        title: const Text(
-          'Competitive Exams',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const BookBankoAppBar(
+        title: 'Competitive Exams',
+        subtitle: 'JEE, NEET, GUJCET & Entrance Tests',
+        showBackButton: true,
       ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Text(
+                'Previous Year Papers & Mock Tests',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
             // Material List Content
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refresh,
-                color: AppColors.primaryBlue,
+                color: AppColors.primary,
                 child: FutureBuilder<List<CompetitiveExamMaterialModel>>(
+                  initialData: _cachedMaterials,
                   future: _materialsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+                    final materials = snapshot.data ?? _cachedMaterials ?? [];
+                    if (materials.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: ShimmerListPlaceholder(itemCount: 6),
                       );
                     }
-
-                    final materials = snapshot.data ?? [];
 
                     if (materials.isEmpty) {
                       return ListView(
@@ -108,32 +123,32 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(20),
+                                    width: 64,
+                                    height: 64,
                                     decoration: const BoxDecoration(
-                                      color: AppColors.lightBlueBg,
+                                      color: Color(0xFFF1F5F9),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
-                                      Icons.picture_as_pdf_rounded,
-                                      size: 48,
-                                      color: AppColors.primaryBlue,
+                                      Icons.emoji_events_outlined,
+                                      size: 32,
+                                      color: AppColors.textMuted,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  const Text(
-                                    'No Competitive Exam Materials uploaded yet',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 17,
+                                  Text(
+                                    'No Exam Materials Found',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Upload PDFs for Competitive Exams in your Book Banko Admin Panel to display here.',
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Check back soon or add competitive exam papers in Admin Panel.',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
@@ -143,10 +158,6 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Refresh'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                    ),
                                   ),
                                 ],
                               ),
@@ -158,7 +169,7 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
 
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       itemCount: materials.length,
                       itemBuilder: (context, index) {
                         final item = materials[index];
@@ -169,55 +180,97 @@ class _CompetitiveExamsScreenState extends State<CompetitiveExamsScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () => _openPdf(item, appState),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(18),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: AppColors.surfaceWhite,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.borderLight),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: AppColors.borderLight, width: 1.2),
                                   boxShadow: const [AppShadows.subtleShadow],
                                 ),
                                 child: Row(
                                   children: [
-                                    // PDF Icon Badge
+                                    // Trophy Icon Badge
                                     Container(
-                                      width: 44,
-                                      height: 44,
+                                      width: 46,
+                                      height: 46,
                                       decoration: BoxDecoration(
-                                        color: AppColors.lightBlueBg,
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: AppColors.examCrimsonBg,
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: const Center(
                                         child: Icon(
-                                          Icons.picture_as_pdf_rounded,
-                                          color: AppColors.primaryBlue,
+                                          Icons.emoji_events_rounded,
+                                          color: AppColors.examCrimson,
                                           size: 24,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 14),
 
-                                    // Material Title
+                                    // Material Details
                                     Expanded(
-                                      child: Text(
-                                        item.title,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textPrimary,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.title,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textPrimary,
+                                              height: 1.25,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (item.examTitle != null) ...[
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.examCrimson.withValues(alpha: 0.1),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    item.examTitle!,
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: AppColors.examCrimson,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                              ],
+                                              if (item.pageCount > 0)
+                                                Text(
+                                                  '${item.pageCount} Pages',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
 
-                                    // Chevron Icon
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: AppColors.textSecondary,
-                                      size: 24,
+                                    // Chevron / Open Button
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF1F5F9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: AppColors.textSecondary,
+                                        size: 20,
+                                      ),
                                     ),
                                   ],
                                 ),

@@ -2,11 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/data_models.dart';
+import 'preference_service.dart';
 
 class ApiService {
-  // Candidate host endpoints to support Physical Android Phone over Wi-Fi, Android Emulator, Web & Desktop
+  // Reusable persistent HTTP client with connection pooling & Keep-Alive
+  static final http.Client _httpClient = http.Client();
+
+  // In-memory instant cache (0ms response time)
+  static final Map<String, dynamic> _memoryCache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheTtl = Duration(minutes: 15);
+
+  static SharedPreferences? _prefs;
+  static const String _prefKeyActiveHost = 'book_banko_cached_active_host';
+
+  // Candidate host endpoints (Working Neon Vercel First, then Local Dev)
   static final List<String> _candidateBaseUrls = [
     if (AppConfig.customApiUrl.isNotEmpty) AppConfig.customApiUrl,
     ...AppConfig.defaultCandidateUrls,
@@ -15,83 +28,225 @@ class ApiService {
   static String _activeBaseUrl = '';
 
   static String get baseUrl {
-    if (AppConfig.customApiUrl.isNotEmpty) return AppConfig.customApiUrl;
     if (_activeBaseUrl.isNotEmpty) return _activeBaseUrl;
-    return 'https://bookbanko.vercel.app/api';
+    if (AppConfig.customApiUrl.isNotEmpty) return AppConfig.customApiUrl;
+    return 'https://bookbanko-neon.vercel.app/api';
   }
 
-  // Helper to make HTTP GET requests across candidate URLs with fast fallback
-  static Future<http.Response?> _getWithFallback(String endpoint) async {
-    // If active base URL is already established, try it first
-    if (_activeBaseUrl.isNotEmpty) {
-      try {
-        final uri = Uri.parse('$_activeBaseUrl/$endpoint');
-        final res = await http.get(uri).timeout(const Duration(milliseconds: 3000));
-        if (res.statusCode == 200) return res;
-      } catch (e) {
-        debugPrint('Active URL failed ($_activeBaseUrl/$endpoint): $e');
+  /// Initialize persistent cache and restore working backend URL
+  static Future<void> init() async {
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      final savedHost = _prefs?.getString(_prefKeyActiveHost);
+      if (savedHost != null && savedHost.isNotEmpty) {
+        _activeBaseUrl = savedHost;
       }
+    } catch (e) {
+      debugPrint('[ApiService] init error: $e');
     }
+  }
 
-    // Try all candidate URLs
-    for (final base in _candidateBaseUrls) {
-      try {
-        final uri = Uri.parse('$base/$endpoint');
-        final res = await http.get(uri).timeout(const Duration(milliseconds: 3000));
-        if (res.statusCode == 200) {
-          _activeBaseUrl = base; // Cache working host URL
-          debugPrint('Connected successfully to backend host: $base');
-          return res;
-        }
-      } catch (e) {
-        // Try next candidate
-      }
+  /// Synchronously retrieve cached data from memory or disk
+  static dynamic _getFromCache(String key) {
+    if (_memoryCache.containsKey(key)) {
+      return _memoryCache[key];
     }
-    debugPrint('All candidate endpoints failed for $endpoint');
+    // Try restoring from disk cache
+    try {
+      final diskJson = _prefs?.getString('cache_$key');
+      if (diskJson != null && diskJson.isNotEmpty) {
+        final decoded = json.decode(diskJson);
+        return decoded;
+      }
+    } catch (_) {}
     return null;
   }
 
-  // 0. Fetch Boards dynamically
-  static Future<List<BoardModel>> fetchBoards() async {
+  /// Save data to both memory cache and disk cache
+  static void _saveToCache(String key, dynamic parsedData, dynamic rawJsonData) {
+    _memoryCache[key] = parsedData;
+    _cacheTimestamps[key] = DateTime.now();
+
+    // Persist to disk in background without blocking
+    try {
+      if (rawJsonData != null && _prefs != null) {
+        _prefs!.setString('cache_$key', json.encode(rawJsonData));
+      }
+    } catch (_) {}
+  }
+
+  /// Helper to make HTTP GET requests with fast fallback and persistent connection
+  static Future<http.Response?> _getWithFallback(String endpoint) async {
+    // 1. If active base URL is already established, try it first
+    if (_activeBaseUrl.isNotEmpty) {
+      try {
+        final uri = Uri.parse('$_activeBaseUrl/$endpoint');
+        final res = await _httpClient.get(uri).timeout(const Duration(milliseconds: 3500));
+        if (res.statusCode == 200) return res;
+      } catch (e) {
+        debugPrint('[ApiService] Active URL timeout/fail ($_activeBaseUrl/$endpoint): $e');
+      }
+    }
+
+    // 2. Try candidate URLs (live working Neon host first)
+    final tested = <String>{};
+    if (_activeBaseUrl.isNotEmpty) tested.add(_activeBaseUrl);
+
+    for (final base in _candidateBaseUrls) {
+      if (tested.contains(base)) continue;
+      tested.add(base);
+
+      try {
+        final uri = Uri.parse('$base/$endpoint');
+        final res = await _httpClient.get(uri).timeout(const Duration(milliseconds: 2500));
+        if (res.statusCode == 200) {
+          _activeBaseUrl = base;
+          _prefs?.setString(_prefKeyActiveHost, base);
+          debugPrint('[ApiService] Connected to host: $base');
+          return res;
+        }
+      } catch (_) {
+        // Try next candidate
+      }
+    }
+
+    debugPrint('[ApiService] All endpoints failed for $endpoint');
+    return null;
+  }
+
+  // ===========================================================================
+  // 0. BOARDS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static List<BoardModel>? getCachedBoards() {
+    final cached = _memoryCache['boards'];
+    if (cached is List<BoardModel>) return cached;
+    final raw = _getFromCache('boards');
+    if (raw is List) {
+      final list = raw.map((item) => BoardModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache['boards'] = list;
+      return list;
+    }
+    return null;
+  }
+
+  static Future<List<BoardModel>> fetchBoards({bool forceRefresh = false}) async {
+    final cached = getCachedBoards();
+    final isStale = _cacheTimestamps['boards'] == null ||
+        DateTime.now().difference(_cacheTimestamps['boards']!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final response = await _getWithFallback('get_boards.php');
       if (response != null && response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => BoardModel.fromJson(item)).toList();
+          final parsed = list.map((item) => BoardModel.fromJson(item)).toList();
+          _saveToCache('boards', parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching boards from API: $e');
+      debugPrint('[ApiService] Error fetching boards: $e');
     }
-    return BoardModel.defaultBoards; // Fallback only on network error
+
+    return cached ?? BoardModel.defaultBoards;
   }
 
-  // 0.05. Fetch Mediums dynamically
-  static Future<List<MediumModel>> fetchMediums() async {
+  // ===========================================================================
+  // 0.05. MEDIUMS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static List<MediumModel>? getCachedMediums() {
+    final cached = _memoryCache['mediums'];
+    if (cached is List<MediumModel>) return cached;
+    final raw = _getFromCache('mediums');
+    if (raw is List) {
+      final list = raw.map((item) => MediumModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache['mediums'] = list;
+      return list;
+    }
+    return null;
+  }
+
+  static Future<List<MediumModel>> fetchMediums({bool forceRefresh = false}) async {
+    final cached = getCachedMediums();
+    final isStale = _cacheTimestamps['mediums'] == null ||
+        DateTime.now().difference(_cacheTimestamps['mediums']!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final response = await _getWithFallback('get_mediums.php');
       if (response != null && response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => MediumModel.fromJson(item)).toList();
+          final parsed = list.map((item) => MediumModel.fromJson(item)).toList();
+          _saveToCache('mediums', parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching mediums from API: $e');
+      debugPrint('[ApiService] Error fetching mediums: $e');
     }
-    return MediumModel.defaultMediums;
+
+    return cached ?? MediumModel.defaultMediums;
   }
 
-  // 0.1. Fetch Standards dynamically with Board & Medium filter
+  // ===========================================================================
+  // 0.1. STANDARDS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _standardsCacheKey(String? bCode, int? bId, String? mCode, int? mId) {
+    return 'standards_${bCode ?? ''}_${bId ?? 0}_${mCode ?? ''}_${mId ?? 0}';
+  }
+
+  static List<StandardModel>? getCachedStandards({
+    String? boardCode,
+    int? boardId,
+    String? mediumCode,
+    int? mediumId,
+  }) {
+    final key = _standardsCacheKey(boardCode, boardId, mediumCode, mediumId);
+    final cached = _memoryCache[key];
+    if (cached is List<StandardModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => StandardModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<StandardModel>> fetchStandards({
     String? boardCode,
     int? boardId,
     String? mediumCode,
     int? mediumId,
+    bool forceRefresh = false,
   }) async {
+    final key = _standardsCacheKey(boardCode, boardId, mediumCode, mediumId);
+    final cached = getCachedStandards(
+      boardCode: boardCode,
+      boardId: boardId,
+      mediumCode: mediumCode,
+      mediumId: mediumId,
+    );
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
       if (boardCode != null && boardCode.isNotEmpty) queryParams.add('board_code=$boardCode');
@@ -105,16 +260,46 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => StandardModel.fromJson(item)).toList();
+          final parsed = list.map((item) => StandardModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching standards from API: $e');
+      debugPrint('[ApiService] Error fetching standards: $e');
     }
-    return []; // Return only standards from Admin Panel API
+
+    return cached ?? [];
   }
 
-  // 0.2. Fetch Streams dynamically with Board, Medium & Standard filter
+  // ===========================================================================
+  // 0.2. STREAMS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _streamsCacheKey(String? bCode, int? bId, String? mCode, int? mId, int? stdNum, int? stdId) {
+    return 'streams_${bCode ?? ''}_${bId ?? 0}_${mCode ?? ''}_${mId ?? 0}_${stdNum ?? 0}_${stdId ?? 0}';
+  }
+
+  static List<StreamModel>? getCachedStreams({
+    String? boardCode,
+    int? boardId,
+    String? mediumCode,
+    int? mediumId,
+    int? standardNumber,
+    int? standardId,
+  }) {
+    final key = _streamsCacheKey(boardCode, boardId, mediumCode, mediumId, standardNumber, standardId);
+    final cached = _memoryCache[key];
+    if (cached is List<StreamModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => StreamModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<StreamModel>> fetchStreams({
     String? boardCode,
     int? boardId,
@@ -122,7 +307,24 @@ class ApiService {
     int? mediumId,
     int? standardNumber,
     int? standardId,
+    bool forceRefresh = false,
   }) async {
+    final key = _streamsCacheKey(boardCode, boardId, mediumCode, mediumId, standardNumber, standardId);
+    final cached = getCachedStreams(
+      boardCode: boardCode,
+      boardId: boardId,
+      mediumCode: mediumCode,
+      mediumId: mediumId,
+      standardNumber: standardNumber,
+      standardId: standardId,
+    );
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
       if (boardCode != null && boardCode.isNotEmpty) queryParams.add('board_code=$boardCode');
@@ -138,22 +340,66 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => StreamModel.fromJson(item)).toList();
+          final parsed = list.map((item) => StreamModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching streams from API: $e');
+      debugPrint('[ApiService] Error fetching streams: $e');
     }
-    return [];
+
+    return cached ?? StreamModel.defaultStreams;
   }
 
-  // 1. Fetch Subjects dynamically for a Board, Medium & Standard
+  // ===========================================================================
+  // 1. SUBJECTS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _subjectsCacheKey(String bCode, int stdNum, String? mCode, String? sSlug) {
+    return 'subjects_${bCode}_${stdNum}_${mCode ?? ''}_${sSlug ?? ''}';
+  }
+
+  static List<SubjectModel>? getCachedSubjects({
+    required String boardCode,
+    required int standardNumber,
+    String? mediumCode,
+    String? streamSlug,
+  }) {
+    final key = _subjectsCacheKey(boardCode, standardNumber, mediumCode, streamSlug);
+    final cached = _memoryCache[key];
+    if (cached is List<SubjectModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => SubjectModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<SubjectModel>> fetchSubjects({
     required String boardCode,
     required int standardNumber,
     String? mediumCode,
     String? streamSlug,
+    bool forceRefresh = false,
   }) async {
+    final key = _subjectsCacheKey(boardCode, standardNumber, mediumCode, streamSlug);
+    final cached = getCachedSubjects(
+      boardCode: boardCode,
+      standardNumber: standardNumber,
+      mediumCode: mediumCode,
+      streamSlug: streamSlug,
+    );
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    // Immediately return cached subjects if available
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[
         'board_code=$boardCode',
@@ -168,20 +414,57 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => SubjectModel.fromJson(item)).toList();
+          final parsed = list.map((item) => SubjectModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching subjects from API: $e');
+      debugPrint('[ApiService] Error fetching subjects: $e');
     }
-    return []; // Return empty list to prevent hardcoded subjects from showing
+
+    return cached ?? [];
   }
 
-  // 2. Fetch Chapters & PDFs for a Subject
+  // ===========================================================================
+  // 2. CHAPTERS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _chaptersCacheKey(int subjectId, String? moduleSlug) {
+    return 'chapters_${subjectId}_${moduleSlug ?? 'textbooks'}';
+  }
+
+  static List<ChapterModel>? getCachedChapters({
+    required int subjectId,
+    String? moduleSlug,
+  }) {
+    final key = _chaptersCacheKey(subjectId, moduleSlug);
+    final cached = _memoryCache[key];
+    if (cached is List<ChapterModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => ChapterModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<ChapterModel>> fetchChapters({
     required int subjectId,
     String? moduleSlug,
+    bool forceRefresh = false,
   }) async {
+    final key = _chaptersCacheKey(subjectId, moduleSlug);
+    final cached = getCachedChapters(subjectId: subjectId, moduleSlug: moduleSlug);
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    // Immediately return cached chapters if available
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final moduleParam = (moduleSlug != null && moduleSlug.isNotEmpty) ? '&module_slug=$moduleSlug' : '';
       final query = 'subject_id=$subjectId$moduleParam';
@@ -191,16 +474,46 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => ChapterModel.fromJson(item)).toList();
+          final parsed = list.map((item) => ChapterModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching chapters from API: $e');
+      debugPrint('[ApiService] Error fetching chapters: $e');
     }
-    return [];
+
+    return cached ?? [];
   }
 
-  // 3. Fetch Extra Materials & PDFs dynamically
+  // ===========================================================================
+  // 3. EXTRA MATERIALS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _extraMatCacheKey(String cat, String? b, String? m, int? std, int? sub, String? q) {
+    return 'extra_mat_${cat}_${b ?? ''}_${m ?? ''}_${std ?? 0}_${sub ?? 0}_${q ?? ''}';
+  }
+
+  static List<ExtraMaterialModel>? getCachedExtraMaterials({
+    String categorySlug = 'extra_material',
+    String? boardCode,
+    String? mediumCode,
+    int? standardNumber,
+    int? subjectId,
+    String? search,
+  }) {
+    final key = _extraMatCacheKey(categorySlug, boardCode, mediumCode, standardNumber, subjectId, search);
+    final cached = _memoryCache[key];
+    if (cached is List<ExtraMaterialModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => ExtraMaterialModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<ExtraMaterialModel>> fetchExtraMaterials({
     String categorySlug = 'extra_material',
     String? boardCode,
@@ -208,7 +521,24 @@ class ApiService {
     int? standardNumber,
     int? subjectId,
     String? search,
+    bool forceRefresh = false,
   }) async {
+    final key = _extraMatCacheKey(categorySlug, boardCode, mediumCode, standardNumber, subjectId, search);
+    final cached = getCachedExtraMaterials(
+      categorySlug: categorySlug,
+      boardCode: boardCode,
+      mediumCode: mediumCode,
+      standardNumber: standardNumber,
+      subjectId: subjectId,
+      search: search,
+    );
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
       if (categorySlug.isNotEmpty) queryParams.add('category_slug=$categorySlug');
@@ -225,32 +555,63 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => ExtraMaterialModel.fromJson(item)).toList();
+          final parsed = list.map((item) => ExtraMaterialModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching extra materials from API: $e');
+      debugPrint('[ApiService] Error fetching extra materials: $e');
     }
-    return [];
+
+    return cached ?? [];
   }
 
-  // 4. Fetch Study Material Products & Stationery (Affiliate Links)
+  // ===========================================================================
+  // 4. STUDY PRODUCTS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _studyProductsCacheKey(String? search, String? tag, bool? isFallbackAd) {
+    return 'study_products_${search ?? ''}_${tag ?? ''}_${isFallbackAd ?? ''}';
+  }
+
+  static List<StudyProductModel>? getCachedStudyProducts({
+    String? search,
+    String? tag,
+    bool? isFallbackAd,
+  }) {
+    final key = _studyProductsCacheKey(search, tag, isFallbackAd);
+    final cached = _memoryCache[key];
+    if (cached is List<StudyProductModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => StudyProductModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<StudyProductModel>> fetchStudyProducts({
     String? search,
     String? tag,
     bool? isFallbackAd,
+    bool forceRefresh = false,
   }) async {
+    final key = _studyProductsCacheKey(search, tag, isFallbackAd);
+    final cached = getCachedStudyProducts(search: search, tag: tag, isFallbackAd: isFallbackAd);
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
-      if (search != null && search.trim().isNotEmpty) {
-        queryParams.add('search=${Uri.encodeComponent(search.trim())}');
-      }
-      if (tag != null && tag.trim().isNotEmpty) {
-        queryParams.add('tag=${Uri.encodeComponent(tag.trim())}');
-      }
-      if (isFallbackAd != null) {
-        queryParams.add('is_fallback_ad=${isFallbackAd ? '1' : '0'}');
-      }
+      if (search != null && search.trim().isNotEmpty) queryParams.add('search=${Uri.encodeComponent(search.trim())}');
+      if (tag != null && tag.trim().isNotEmpty) queryParams.add('tag=${Uri.encodeComponent(tag.trim())}');
+      if (isFallbackAd != null) queryParams.add('is_fallback_ad=${isFallbackAd ? '1' : '0'}');
 
       final queryString = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
       final response = await _getWithFallback('get_study_products.php$queryString');
@@ -259,17 +620,45 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => StudyProductModel.fromJson(item)).toList();
+          final parsed = list.map((item) => StudyProductModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching study products from API: $e');
+      debugPrint('[ApiService] Error fetching study products: $e');
     }
-    return [];
+
+    return cached ?? [];
   }
 
-  // 5. Fetch Competitive Exams (JEE, NEET, GATE, etc.) dynamically
-  static Future<List<CompetitiveExamModel>> fetchCompetitiveExams({String? search}) async {
+  // ===========================================================================
+  // 5. COMPETITIVE EXAMS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static List<CompetitiveExamModel>? getCachedCompetitiveExams({String? search}) {
+    final key = 'comp_exams_${search ?? ''}';
+    final cached = _memoryCache[key];
+    if (cached is List<CompetitiveExamModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => CompetitiveExamModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
+  static Future<List<CompetitiveExamModel>> fetchCompetitiveExams({String? search, bool forceRefresh = false}) async {
+    final key = 'comp_exams_${search ?? ''}';
+    final cached = getCachedCompetitiveExams(search: search);
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final searchParam = (search != null && search.trim().isNotEmpty) ? '?search=${Uri.encodeComponent(search.trim())}' : '';
       final response = await _getWithFallback('get_competitive_exams.php$searchParam');
@@ -278,22 +667,65 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => CompetitiveExamModel.fromJson(item)).toList();
+          final parsed = list.map((item) => CompetitiveExamModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching competitive exams from API: $e');
+      debugPrint('[ApiService] Error fetching competitive exams: $e');
     }
-    return CompetitiveExamModel.defaultExams; // Safe fallback
+
+    return cached ?? CompetitiveExamModel.defaultExams;
   }
 
-  // 6. Fetch Competitive Exam Materials & PDFs (JEE, NEET, GATE Question Papers, Formulas, Notes)
+  // ===========================================================================
+  // 6. COMPETITIVE EXAM MATERIALS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _compExamMatCacheKey(int? examId, String? examSlug, String? matType, String? search) {
+    return 'comp_exam_mat_${examId ?? 0}_${examSlug ?? ''}_${matType ?? ''}_${search ?? ''}';
+  }
+
+  static List<CompetitiveExamMaterialModel>? getCachedCompetitiveExamMaterials({
+    int? examId,
+    String? examSlug,
+    String? materialType,
+    String? search,
+  }) {
+    final key = _compExamMatCacheKey(examId, examSlug, materialType, search);
+    final cached = _memoryCache[key];
+    if (cached is List<CompetitiveExamMaterialModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => CompetitiveExamMaterialModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<CompetitiveExamMaterialModel>> fetchCompetitiveExamMaterials({
     int? examId,
     String? examSlug,
     String? materialType,
     String? search,
+    bool forceRefresh = false,
   }) async {
+    final key = _compExamMatCacheKey(examId, examSlug, materialType, search);
+    final cached = getCachedCompetitiveExamMaterials(
+      examId: examId,
+      examSlug: examSlug,
+      materialType: materialType,
+      search: search,
+    );
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
       if (examId != null && examId > 0) queryParams.add('exam_id=$examId');
@@ -308,20 +740,56 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => CompetitiveExamMaterialModel.fromJson(item)).toList();
+          final parsed = list.map((item) => CompetitiveExamMaterialModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching competitive exam materials from API: $e');
+      debugPrint('[ApiService] Error fetching competitive exam materials: $e');
     }
-    return [];
+
+    return cached ?? [];
   }
 
-  // 7. Fetch Higher Education Materials & PDFs dynamically
+  // ===========================================================================
+  // 7. HIGHER EDUCATION MATERIALS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _higherEduCacheKey(String? courseName, String? search) {
+    return 'higher_edu_mat_${courseName ?? ''}_${search ?? ''}';
+  }
+
+  static List<HigherEducationMaterialModel>? getCachedHigherEducationMaterials({
+    String? courseName,
+    String? search,
+  }) {
+    final key = _higherEduCacheKey(courseName, search);
+    final cached = _memoryCache[key];
+    if (cached is List<HigherEducationMaterialModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => HigherEducationMaterialModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<HigherEducationMaterialModel>> fetchHigherEducationMaterials({
     String? courseName,
     String? search,
+    bool forceRefresh = false,
   }) async {
+    final key = _higherEduCacheKey(courseName, search);
+    final cached = getCachedHigherEducationMaterials(courseName: courseName, search: search);
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>[];
       if (courseName != null && courseName.isNotEmpty) queryParams.add('course_name=${Uri.encodeComponent(courseName)}');
@@ -334,20 +802,56 @@ class ApiService {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
-          return list.map((item) => HigherEducationMaterialModel.fromJson(item)).toList();
+          final parsed = list.map((item) => HigherEducationMaterialModel.fromJson(item)).toList();
+          _saveToCache(key, parsed, list);
+          return parsed;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching higher education materials from API: $e');
+      debugPrint('[ApiService] Error fetching higher education materials: $e');
     }
-    return [];
+
+    return cached ?? [];
   }
 
-  // 8. Fetch AI Course Materials & PDFs by Standard dynamically
+  // ===========================================================================
+  // 8. AI COURSE MATERIALS (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static String _aiCourseCacheKey(int stdNum, String? search) {
+    return 'ai_course_mat_${stdNum}_${search ?? ''}';
+  }
+
+  static List<AiCourseMaterialModel>? getCachedAiCourseMaterials({
+    required int standardNumber,
+    String? search,
+  }) {
+    final key = _aiCourseCacheKey(standardNumber, search);
+    final cached = _memoryCache[key];
+    if (cached is List<AiCourseMaterialModel>) return cached;
+    final raw = _getFromCache(key);
+    if (raw is List) {
+      final list = raw.map((item) => AiCourseMaterialModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _memoryCache[key] = list;
+      return list;
+    }
+    return null;
+  }
+
   static Future<List<AiCourseMaterialModel>> fetchAiCourseMaterials({
     required int standardNumber,
     String? search,
+    bool forceRefresh = false,
   }) async {
+    final key = _aiCourseCacheKey(standardNumber, search);
+    final cached = getCachedAiCourseMaterials(standardNumber: standardNumber, search: search);
+    final isStale = _cacheTimestamps[key] == null ||
+        DateTime.now().difference(_cacheTimestamps[key]!) > _cacheTtl;
+
+    if (!forceRefresh && cached != null && cached.isNotEmpty && !isStale) {
+      return cached;
+    }
+
     try {
       final queryParams = <String>['standard_number=$standardNumber'];
       if (search != null && search.trim().isNotEmpty) {
@@ -362,15 +866,17 @@ class ApiService {
         if (data['status'] == 'success' && data['data'] != null) {
           final List list = data['data'];
           if (list.isNotEmpty) {
-            return list.map((item) => AiCourseMaterialModel.fromJson(item)).toList();
+            final parsed = list.map((item) => AiCourseMaterialModel.fromJson(item)).toList();
+            _saveToCache(key, parsed, list);
+            return parsed;
           }
         }
       }
     } catch (e) {
-      debugPrint('Error fetching AI course materials from API: $e');
+      debugPrint('[ApiService] Error fetching AI course materials: $e');
     }
 
-    return _getDefaultAiMaterialsForStandard(standardNumber);
+    return cached ?? _getDefaultAiMaterialsForStandard(standardNumber);
   }
 
   static List<AiCourseMaterialModel> _getDefaultAiMaterialsForStandard(int std) {
@@ -532,21 +1038,154 @@ class ApiService {
     }
   }
 
-  // 9. Fetch App Config & AdMob settings dynamically
-  static Future<Map<String, dynamic>?> getAppConfig() async {
+  // ===========================================================================
+  // 9. APP CONFIG & NOTICES (Instant Cached + Stale-While-Revalidate)
+  // ===========================================================================
+
+  static Map<String, dynamic>? getCachedAppConfig() {
+    final cached = _memoryCache['app_config'];
+    if (cached is Map<String, dynamic>) return cached;
+    final raw = _getFromCache('app_config');
+    if (raw is Map) {
+      final map = Map<String, dynamic>.from(raw);
+      _memoryCache['app_config'] = map;
+      return map;
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getAppConfig({bool forceRefresh = false}) async {
+    final cached = getCachedAppConfig();
+    if (!forceRefresh && cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
     try {
       final response = await _getWithFallback('get_app_config.php');
       if (response != null && response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
-          return Map<String, dynamic>.from(data['data']);
+          final map = Map<String, dynamic>.from(data['data']);
+          _saveToCache('app_config', map, map);
+          return map;
         }
       }
     } catch (e) {
-      debugPrint('Error fetching app config from API: $e');
+      debugPrint('[ApiService] Error fetching app config: $e');
     }
-    return null;
+    return cached;
+  }
+
+  // ===========================================================================
+  // 10. APP WARM-UP & PRE-FETCH ENGINE (Instant Screen Responses)
+  // ===========================================================================
+
+  /// Pre-fetches common data in the background so clicks load in 0ms!
+  static Future<void> prefetchAppData({
+    String? boardCode,
+    String? mediumCode,
+    int? standardNumber,
+    String? streamSlug,
+  }) async {
+    try {
+      await init();
+
+      final futures = <Future>[
+        fetchBoards(),
+        fetchMediums(),
+      ];
+
+      if (boardCode != null && mediumCode != null) {
+        futures.add(fetchStandards(boardCode: boardCode, mediumCode: mediumCode));
+      }
+
+      if (boardCode != null && standardNumber != null && standardNumber > 0) {
+        futures.add(fetchSubjects(
+          boardCode: boardCode,
+          standardNumber: standardNumber,
+          mediumCode: mediumCode,
+          streamSlug: streamSlug,
+        ));
+      }
+
+      // Pre-warm competitive exams and extra materials concurrently
+      futures.add(fetchCompetitiveExams());
+      futures.add(fetchExtraMaterials());
+
+      await Future.wait(futures);
+      debugPrint('[ApiService] App pre-fetch completed. App is hot and primed for 0ms clicks!');
+    } catch (e) {
+      debugPrint('[ApiService] Background pre-fetch notice: $e');
+    }
+  }
+
+  /// Save or register student profile on backend
+  static Future<UserModel> saveUser({
+    required String username,
+    required String email,
+    String? password,
+    required String schoolName,
+    required String city,
+    required String district,
+    required String state,
+    bool acknowledged = true,
+    String? board,
+    String? medium,
+    int? standard,
+  }) async {
+    final payload = {
+      'username': username.trim(),
+      'email': email.trim(),
+      if (password != null && password.trim().isNotEmpty) 'password': password.trim(),
+      'school_name': schoolName.trim(),
+      'city': city.trim(),
+      'district': district.trim(),
+      'state': state.trim(),
+      'acknowledged': acknowledged ? 1 : 0,
+      if (board != null && board.isNotEmpty) 'board': board,
+      if (medium != null && medium.isNotEmpty) 'medium': medium,
+      if (standard != null && standard > 0) 'standard': standard,
+    };
+
+    try {
+      final workingBase = baseUrl;
+      final uri = Uri.parse('$workingBase/save_user.php');
+
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 7));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = json.decode(response.body);
+        if (decoded['status'] == 'success' && decoded['data'] != null) {
+          final user = UserModel.fromJson(Map<String, dynamic>.from(decoded['data']));
+          await PreferenceService.saveUserData(user);
+          return user;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] saveUser network notice: $e');
+    }
+
+    // Offline / fallback: save locally so student is never blocked
+    final localUser = UserModel(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      username: username.trim(),
+      email: email.trim(),
+      password: password?.trim(),
+      schoolName: schoolName.trim(),
+      city: city.trim(),
+      district: district.trim(),
+      state: state.trim(),
+      acknowledged: acknowledged,
+      board: board,
+      medium: medium,
+      standard: standard,
+      createdAt: DateTime.now(),
+    );
+    await PreferenceService.saveUserData(localUser);
+    return localUser;
   }
 }
-
-

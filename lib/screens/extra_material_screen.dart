@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../services/api_services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/book_banko_app_bar.dart';
+import '../widgets/shimmer_loading.dart';
 
 class ExtraMaterialScreen extends StatefulWidget {
   final String categorySlug;
@@ -21,15 +24,22 @@ class ExtraMaterialScreen extends StatefulWidget {
 }
 
 class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
+  List<ExtraMaterialModel>? _cachedMaterials;
   late Future<List<ExtraMaterialModel>> _materialsFuture;
 
   @override
   void initState() {
     super.initState();
+    _cachedMaterials = ApiService.getCachedExtraMaterials(
+      categorySlug: widget.categorySlug,
+    );
     _loadMaterials();
   }
 
   void _loadMaterials() {
+    _cachedMaterials ??= ApiService.getCachedExtraMaterials(
+      categorySlug: widget.categorySlug,
+    );
     _materialsFuture = ApiService.fetchExtraMaterials(
       categorySlug: widget.categorySlug,
     );
@@ -37,7 +47,10 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadMaterials();
+      _materialsFuture = ApiService.fetchExtraMaterials(
+        categorySlug: widget.categorySlug,
+        forceRefresh: true,
+      );
     });
   }
 
@@ -62,40 +75,43 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
     final appState = Provider.of<BookBankoAppState>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.categoryTitle,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppColors.primaryBlue,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: AppColors.canvasBg,
+      appBar: BookBankoAppBar(
+        title: widget.categoryTitle,
+        subtitle: '${appState.selectedBoard} • Std ${appState.activeStandardNumber}',
+        showBackButton: true,
       ),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Text(
+                'IMP Questions, Blueprints & Solutions',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
             // Material List Content
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refresh,
-                color: AppColors.primaryBlue,
+                color: AppColors.primary,
                 child: FutureBuilder<List<ExtraMaterialModel>>(
+                  initialData: _cachedMaterials,
                   future: _materialsFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+                    final materials = snapshot.data ?? _cachedMaterials ?? [];
+                    if (materials.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: ShimmerListPlaceholder(itemCount: 6),
                       );
                     }
-
-                    final materials = snapshot.data ?? [];
 
                     if (materials.isEmpty) {
                       return ListView(
@@ -109,31 +125,32 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.lightBlueBg,
+                                    width: 64,
+                                    height: 64,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
-                                      Icons.file_copy_outlined,
-                                      size: 48,
-                                      color: AppColors.primaryBlue,
+                                      Icons.bookmark_outline_rounded,
+                                      size: 32,
+                                      color: AppColors.textMuted,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No ${widget.categoryTitle} uploaded yet',
-                                    style: const TextStyle(
+                                    'No ${widget.categoryTitle} Uploaded Yet',
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 17,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 6),
                                   Text(
                                     'Upload PDFs for ${widget.categoryTitle} in your Book Banko Admin Panel to display here.',
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,
                                     ),
@@ -143,10 +160,6 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Refresh'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                    ),
                                   ),
                                 ],
                               ),
@@ -158,7 +171,7 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
 
                     return ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       itemCount: materials.length,
                       itemBuilder: (context, index) {
                         final item = materials[index];
@@ -169,52 +182,107 @@ class _ExtraMaterialScreenState extends State<ExtraMaterialScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () => _openPdf(item, appState),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(18),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: AppColors.surfaceWhite,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.borderLight),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: AppColors.borderLight, width: 1.2),
                                   boxShadow: const [AppShadows.subtleShadow],
                                 ),
                                 child: Row(
                                   children: [
                                     // PDF Icon Badge
                                     Container(
-                                      width: 44,
-                                      height: 44,
+                                      width: 46,
+                                      height: 46,
                                       decoration: BoxDecoration(
-                                        color: AppColors.lightBlueBg,
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: AppColors.notesAmberBg,
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: const Center(
                                         child: Icon(
-                                          Icons.picture_as_pdf_rounded,
-                                          color: AppColors.primaryBlue,
+                                          Icons.bookmark_rounded,
+                                          color: AppColors.notesAmber,
                                           size: 24,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 14),
 
-                                    // Material Title
+                                    // Material Details
                                     Expanded(
-                                      child: Text(
-                                        item.title,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textPrimary,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.title,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textPrimary,
+                                              height: 1.25,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (item.categoryName != null) ...[
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFF1F5F9),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    item.categoryName!,
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: AppColors.textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                              ],
+                                              if (item.pageCount > 0)
+                                                Text(
+                                                  '${item.pageCount} Pages',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                              if (item.fileSizeMb > 0) ...[
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '• ${item.fileSizeMb.toStringAsFixed(1)} MB',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 11,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
 
-                                    // Chevron Icon
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: AppColors.textSecondary,
-                                      size: 24,
+                                    // Chevron / Read Button
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF1F5F9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: AppColors.textSecondary,
+                                        size: 20,
+                                      ),
                                     ),
                                   ],
                                 ),
