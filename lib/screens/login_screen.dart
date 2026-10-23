@@ -48,10 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  bool get _isBothFieldsFilled =>
-      _loginController.text.trim().isNotEmpty &&
-      _passwordController.text.trim().length == 8;
-
   Future<void> _handleSignIn() async {
     setState(() {
       _errorMessage = null;
@@ -495,26 +491,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 52,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              gradient: LinearGradient(
-                                colors: _isBothFieldsFilled
-                                    ? const [
-                                        Color(0xFF0F172A),
-                                        Color(0xFF1E3A8A),
-                                      ]
-                                    : const [
-                                        Color(0xFF475569),
-                                        Color(0xFF64748B),
-                                      ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      (_isBothFieldsFilled
-                                              ? const Color(0xFF1E3A8A)
-                                              : const Color(0xFF64748B))
-                                          .withValues(alpha: 0.35),
+                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
