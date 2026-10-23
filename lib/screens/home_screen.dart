@@ -19,7 +19,7 @@ import 'study_material_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void _showManageStandardsModal(
+  void _showChangeStandardModal(
     BuildContext context,
     BookBankoAppState appState,
   ) {
@@ -53,7 +53,7 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Manage Standards',
+                    'Select Active Standard',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               Text(
-                'Add or remove standards from your home shortcut bar.',
+                'Choose your active standard to display on your home screen.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -121,21 +121,23 @@ class HomeScreen extends StatelessWidget {
                               const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final std = standards[index];
-                            final isAdded = state.myStandards.contains(
-                              std.number,
-                            );
-                            final isOnlyOne = state.myStandards.length <= 1;
+                            final isActive =
+                                state.activeStandardNumber == std.number;
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                                 vertical: 4,
                               ),
+                              onTap: () {
+                                state.setActiveStandard(std.number);
+                                Navigator.pop(ctx);
+                              },
                               leading: Container(
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: isAdded
+                                  color: isActive
                                       ? AppColors.primary
                                       : AppColors.lightBlueBg,
                                   borderRadius: BorderRadius.circular(14),
@@ -146,7 +148,7 @@ class HomeScreen extends StatelessWidget {
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
-                                      color: isAdded
+                                      color: isActive
                                           ? Colors.white
                                           : AppColors.primary,
                                     ),
@@ -156,80 +158,67 @@ class HomeScreen extends StatelessWidget {
                               title: Text(
                                 std.name,
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: isAdded
+                                  fontWeight: isActive
                                       ? FontWeight.bold
                                       : FontWeight.w600,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              trailing: isAdded
-                                  ? OutlinedButton.icon(
-                                      onPressed: isOnlyOne
-                                          ? null
-                                          : () => state.removeStandard(
-                                              std.number,
-                                            ),
-                                      icon: Icon(
-                                        Icons.check_circle_rounded,
-                                        size: 16,
-                                        color: isOnlyOne
-                                            ? AppColors.textMuted
-                                            : AppColors.error,
+                              trailing: isActive
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
                                       ),
-                                      label: Text(
-                                        isOnlyOne ? 'Active' : 'Remove',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: isOnlyOne
-                                              ? AppColors.textMuted
-                                              : AppColors.error,
-                                        ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981)
+                                            .withValues(alpha: 0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
                                       ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(
-                                          color: isOnlyOne
-                                              ? AppColors.borderLight
-                                              : AppColors.error.withValues(
-                                                  alpha: 0.4,
-                                                ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            20,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            size: 15,
+                                            color: Color(0xFF10B981),
                                           ),
-                                        ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Active',
+                                            style:
+                                                GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF10B981),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     )
-                                  : ElevatedButton.icon(
-                                      onPressed: () =>
-                                          state.addStandard(std.number),
-                                      icon: const Icon(
-                                        Icons.add_rounded,
-                                        size: 16,
-                                      ),
-                                      label: Text(
-                                        'Add',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                                  : ElevatedButton(
+                                      onPressed: () {
+                                        state.setActiveStandard(std.number);
+                                        Navigator.pop(ctx);
+                                      },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.primary,
                                         foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
+                                          horizontal: 16,
                                           vertical: 6,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Select',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ),
@@ -423,12 +412,12 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // MY STANDARDS SECTION
+                    // MY STANDARD SECTION (SHOW EXACTLY ONE ACTIVE STANDARD)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'MY STANDARDS',
+                          'MY STANDARD',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -438,9 +427,9 @@ class HomeScreen extends StatelessWidget {
                         ),
                         GestureDetector(
                           onTap: () =>
-                              _showManageStandardsModal(context, appState),
+                              _showChangeStandardModal(context, appState),
                           child: Text(
-                            'Manage',
+                            'Change',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -451,34 +440,26 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          ...appState.myStandards.map((stdNum) {
-                            final isSelected = activeStd == stdNum;
-                            final canRemove = appState.myStandards.length > 1;
-
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 12.0),
-                              child: ActiveStandardBadge(
-                                standardNumber: stdNum,
-                                isSelected: isSelected,
-                                onRemove: canRemove
-                                    ? () => appState.removeStandard(stdNum)
-                                    : null,
-                                onTap: () {
-                                  appState.setActiveStandard(stdNum);
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/standard_dashboard',
-                                  );
-                                },
-                              ),
+                    Builder(
+                      builder: (context) {
+                        final stdNum = activeStd > 0
+                            ? activeStd
+                            : (appState.myStandards.isNotEmpty
+                                ? appState.myStandards.first
+                                : 10);
+                        return ActiveStandardBadge(
+                          standardNumber: stdNum,
+                          isSelected: true,
+                          onRemove: null,
+                          onTap: () {
+                            appState.setActiveStandard(stdNum);
+                            Navigator.pushNamed(
+                              context,
+                              '/standard_dashboard',
                             );
-                          }),
-                        ],
-                      ),
+                          },
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 16),

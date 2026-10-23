@@ -75,10 +75,14 @@ class BookBankoAppState extends ChangeNotifier {
 
         final list = (data['myStandards'] as List<dynamic>?)?.cast<int>() ?? [];
         _myStandards.clear();
-        if (list.isNotEmpty) {
-          _myStandards.addAll(list);
-        } else if (_activeStandardNumber > 0) {
+        if (_activeStandardNumber > 0) {
           _myStandards.add(_activeStandardNumber);
+        } else if (list.isNotEmpty) {
+          _activeStandardNumber = list.first;
+          _myStandards.add(_activeStandardNumber);
+        } else {
+          _activeStandardNumber = 10;
+          _myStandards.add(10);
         }
 
         if (data['streamSlug'] != null) {
@@ -188,10 +192,9 @@ class BookBankoAppState extends ChangeNotifier {
 
   void setActiveStandard(int number) {
     _activeStandardNumber = number;
-    if (!_myStandards.contains(number)) {
-      _myStandards.add(number);
-      PreferenceService.saveMyStandards(_myStandards);
-    }
+    _myStandards.clear();
+    _myStandards.add(number);
+    PreferenceService.saveMyStandards(_myStandards);
     PreferenceService.saveActiveStandard(number);
     if (_currentUser != null) {
       _currentUser = _currentUser!.copyWith(standard: number);
@@ -208,34 +211,17 @@ class BookBankoAppState extends ChangeNotifier {
   }
 
   bool addStandard(int number) {
-    if (_myStandards.contains(number)) return false;
-    _myStandards.add(number);
-    _activeStandardNumber = number;
-    PreferenceService.saveActiveStandard(number);
-    PreferenceService.saveMyStandards(_myStandards);
-    notifyListeners();
+    setActiveStandard(number);
     return true;
   }
 
   void removeStandard(int number) {
-    if (_myStandards.length <= 1) return;
-    _myStandards.remove(number);
-    if (_activeStandardNumber == number) {
-      _activeStandardNumber = _myStandards.first;
-    }
-    PreferenceService.saveActiveStandard(_activeStandardNumber);
-    PreferenceService.saveMyStandards(_myStandards);
+    // Only single standard supported
     notifyListeners();
   }
 
   void toggleStandard(int number) {
-    if (_myStandards.contains(number)) {
-      if (_myStandards.length > 1) {
-        removeStandard(number);
-      }
-    } else {
-      addStandard(number);
-    }
+    setActiveStandard(number);
   }
 
   void selectStreamModel(StreamModel stream) {
