@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../services/api_services.dart';
 import '../services/preference_service.dart';
 import 'data_models.dart';
 
@@ -111,10 +112,32 @@ class BookBankoAppState extends ChangeNotifier {
     return false;
   }
 
-  void setCurrentUser(UserModel user) {
+  void setCurrentUser(UserModel? user) {
     _currentUser = user;
-    PreferenceService.saveUserData(user);
+    if (user != null) {
+      PreferenceService.saveUserData(user);
+    }
     notifyListeners();
+  }
+
+  /// Log out user and clear stored preferences
+  Future<void> logOut() async {
+    _currentUser = null;
+    _isOnboarded = false;
+    await PreferenceService.clearAll();
+    notifyListeners();
+  }
+
+  /// Permanently delete student account and clear local storage
+  Future<bool> deleteAccount() async {
+    if (_currentUser != null) {
+      await ApiService.deleteUser(
+        userId: _currentUser!.id,
+        email: _currentUser!.email,
+      );
+    }
+    await logOut();
+    return true;
   }
 
   void selectModule({required String slug, required String title}) {

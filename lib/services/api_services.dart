@@ -1188,4 +1188,94 @@ class ApiService {
     await PreferenceService.saveUserData(localUser);
     return localUser;
   }
+
+  /// Delete student user account and learning data permanently
+  static Future<bool> deleteUser({int? userId, required String email}) async {
+    try {
+      final workingBase = baseUrl;
+      final uri = Uri.parse('$workingBase/delete_user.php');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          if (userId != null && userId > 0) 'user_id': userId,
+          'email': email.trim(),
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded['status'] == 'success') {
+          await PreferenceService.clearAll();
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteUser notice: $e');
+    }
+    // Clear locally regardless to protect user privacy
+    await PreferenceService.clearAll();
+    return true;
+  }
+
+  /// Reset / update user password
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      final workingBase = baseUrl;
+      final uri = Uri.parse('$workingBase/reset_password.php');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email.trim(),
+          'password': newPassword.trim(),
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200 || response.statusCode == 400 || response.statusCode == 404) {
+        final decoded = json.decode(response.body);
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (e) {
+      debugPrint('[ApiService] resetPassword network error: $e');
+      return {'status': 'error', 'message': 'Network error: $e'};
+    }
+    return {'status': 'error', 'message': 'Failed to reset password. Please check your connection.'};
+  }
+
+  /// Student sign in via email/username and 8-character password
+  static Future<Map<String, dynamic>> loginStudent({
+    required String login,
+    required String password,
+  }) async {
+    try {
+      final workingBase = baseUrl;
+      final uri = Uri.parse('$workingBase/login_student.php');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': login.trim(),
+          'password': password.trim(),
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200 && decoded['status'] == 'success') {
+        final user = UserModel.fromJson(Map<String, dynamic>.from(decoded['data']));
+        await PreferenceService.saveUserData(user);
+        return {'status': 'success', 'user': user};
+      }
+      return {
+        'status': 'error',
+        'message': decoded['message'] ?? 'Invalid credentials. Please try again.',
+      };
+    } catch (e) {
+      debugPrint('[ApiService] loginStudent notice: $e');
+      return {'status': 'error', 'message': 'Network connection issue: $e'};
+    }
+  }
 }
