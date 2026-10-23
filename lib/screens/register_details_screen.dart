@@ -424,7 +424,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             const SizedBox(height: 16),
 
                             // 3. School Name
-                            _buildInputLabel('Currently Studying In Which School?', isRequired: true),
+                            _buildInputLabel('School Name', isRequired: true),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _schoolController,

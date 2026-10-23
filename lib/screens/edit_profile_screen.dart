@@ -323,7 +323,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          _buildFieldLabel('School / College Name'),
+                          _buildFieldLabel('School Name'),
                           const SizedBox(height: 6),
                           _buildTextField(
                             controller: _schoolController,
