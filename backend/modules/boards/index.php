@@ -27,10 +27,12 @@ include __DIR__ . '/../../includes/header.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h5 class="fw-bold mb-0 text-dark">All Education Boards (<?= count($boards) ?>)</h5>
+    <?php if (hasPermission('boards', 'add')): ?>
     <a href="<?= url('modules/boards/add.php') ?>" class="btn btn-bb-primary btn-sm d-inline-flex align-items-center gap-2">
         <i class="bi bi-plus-lg"></i>
         <span>Add New Board</span>
     </a>
+    <?php endif; ?>
 </div>
 
 <div class="bb-card p-3 p-md-4">
@@ -74,12 +76,16 @@ include __DIR__ . '/../../includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td class="text-end">
-                            <a href="<?= url('modules/boards/edit.php?id=' . $board['id']) ?>" class="btn btn-sm btn-light border p-1 px-2" title="Edit">
-                                <i class="bi bi-pencil-fill text-primary"></i>
-                            </a>
-                            <a href="<?= url('modules/boards/delete.php?id=' . $board['id'] . '&csrf=' . getCSRFToken()) ?>" class="btn btn-sm btn-light border p-1 px-2 text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete board <?= htmlspecialchars($board['code']) ?>? All associated subjects will also be deleted.');">
-                                <i class="bi bi-trash-fill"></i>
-                            </a>
+                            <?php if (hasPermission('boards', 'edit')): ?>
+                                <a href="<?= url('modules/boards/edit.php?id=' . $board['id']) ?>" class="btn btn-sm btn-light border p-1 px-2" title="Edit">
+                                    <i class="bi bi-pencil-fill text-primary"></i>
+                                </a>
+                                <a href="<?= url('modules/boards/delete.php?id=' . $board['id'] . '&csrf=' . getCSRFToken()) ?>" class="btn btn-sm btn-light border p-1 px-2 text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete board <?= htmlspecialchars($board['code']) ?>? All associated subjects will also be deleted.');">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            <?php else: ?>
+                                <span class="badge bg-light text-secondary border">View Only</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

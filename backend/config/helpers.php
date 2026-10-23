@@ -19,15 +19,310 @@ function requireLogin(): void {
         header('Location: ' . BASE_URL . 'auth/login.php');
         exit;
     }
+    enforceRoutePermission();
 }
 
 function currentAdmin(): array {
     return $_SESSION['admin_user'] ?? [
         'id' => 0,
         'username' => 'Guest',
+        'email' => '',
         'full_name' => 'Guest User',
-        'role' => 'viewer'
+        'role' => 'viewer',
+        'permissions' => []
     ];
+}
+
+// ==========================================
+// Role-Based Access Control (RBAC) & Privileges
+// ==========================================
+
+function getAllAdminModules(): array {
+    return [
+        'dashboard' => [
+            'name' => 'Dashboard & Analytics',
+            'icon' => 'bi-grid-1x2-fill',
+            'url' => 'modules/dashboard/index.php',
+            'group' => 'Core',
+            'actions' => ['view']
+        ],
+        // Education Hierarchy
+        'boards' => [
+            'name' => 'Educational Boards',
+            'icon' => 'bi-buildings',
+            'url' => 'modules/boards/index.php',
+            'group' => 'Education Hierarchy',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'mediums' => [
+            'name' => 'Mediums of Study',
+            'icon' => 'bi-translate',
+            'url' => 'modules/mediums/index.php',
+            'group' => 'Education Hierarchy',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'standards' => [
+            'name' => 'Standards / Classes',
+            'icon' => 'bi-mortarboard-fill',
+            'url' => 'modules/standards/index.php',
+            'group' => 'Education Hierarchy',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'streams' => [
+            'name' => 'Streams (11th & 12th)',
+            'icon' => 'bi-diagram-3-fill',
+            'url' => 'modules/streams/index.php',
+            'group' => 'Education Hierarchy',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'subjects' => [
+            'name' => 'Subjects',
+            'icon' => 'bi-journal-bookmark-fill',
+            'url' => 'modules/subjects/index.php',
+            'group' => 'Education Hierarchy',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        // Standard Study Modules (PDFs)
+        'textbooks' => [
+            'name' => 'Textbooks',
+            'icon' => 'bi-book-half',
+            'url' => 'modules/textbooks/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'pyqs' => [
+            'name' => 'Old PYQs',
+            'icon' => 'bi-journal-text',
+            'url' => 'modules/pyqs/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'paper_sets' => [
+            'name' => 'Paper Sets',
+            'icon' => 'bi-clipboard-check-fill',
+            'url' => 'modules/paper_sets/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'blueprints' => [
+            'name' => 'Blueprint',
+            'icon' => 'bi-compass-fill',
+            'url' => 'modules/blueprints/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'mimp' => [
+            'name' => 'M.IMP Questions',
+            'icon' => 'bi-star-fill',
+            'url' => 'modules/mimp/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'chapters' => [
+            'name' => 'All Chapters & Master PDFs',
+            'icon' => 'bi-file-earmark-pdf-fill',
+            'url' => 'modules/chapters/index.php',
+            'group' => 'Standard Study Modules (PDFs)',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        // Home Categories & Store
+        'extra_materials' => [
+            'name' => 'Extra Material PDFs',
+            'icon' => 'bi-bookmark-star-fill',
+            'url' => 'modules/extra_materials/index.php',
+            'group' => 'Home Categories & Store',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'competitive_exams' => [
+            'name' => 'Competitive Exams',
+            'icon' => 'bi-award-fill',
+            'url' => 'modules/competitive_exams/index.php',
+            'group' => 'Home Categories & Store',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'higher_education' => [
+            'name' => 'Higher Education',
+            'icon' => 'bi-mortarboard-fill',
+            'url' => 'modules/higher_education/index.php',
+            'group' => 'Home Categories & Store',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'ai_courses' => [
+            'name' => 'AI Course Materials',
+            'icon' => 'bi-cpu-fill',
+            'url' => 'modules/ai_courses/index.php',
+            'group' => 'Home Categories & Store',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'study_products' => [
+            'name' => 'Study Products (Store)',
+            'icon' => 'bi-cart4',
+            'url' => 'modules/study_products/index.php',
+            'group' => 'Home Categories & Store',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        // App Management
+        'students' => [
+            'name' => 'Registered Students',
+            'icon' => 'bi-people-fill',
+            'url' => 'modules/students/index.php',
+            'group' => 'App Management',
+            'actions' => ['view', 'edit']
+        ],
+        'banners' => [
+            'name' => 'Banners & Notices',
+            'icon' => 'bi-megaphone-fill',
+            'url' => 'modules/banners/index.php',
+            'group' => 'App Management',
+            'actions' => ['view', 'add', 'edit']
+        ],
+        'settings' => [
+            'name' => 'App Settings & In-App Ads',
+            'icon' => 'bi-sliders',
+            'url' => 'modules/settings/index.php',
+            'group' => 'App Management',
+            'actions' => ['view', 'edit']
+        ],
+    ];
+}
+
+function isSuperAdmin(?array $user = null): bool {
+    $user = $user ?? ($_SESSION['admin_user'] ?? []);
+    $role = strtolower((string)($user['role'] ?? ''));
+    return $role === 'super_admin' || $role === 'admin';
+}
+
+function getLoggedInAdminPermissions(): array {
+    if (isSuperAdmin()) {
+        $all = [];
+        foreach (getAllAdminModules() as $modKey => $modInfo) {
+            $all[$modKey] = $modInfo['actions'];
+        }
+        $all['team'] = ['view', 'add', 'edit', 'delete'];
+        return $all;
+    }
+    return $_SESSION['admin_user']['permissions'] ?? [];
+}
+
+function hasPermission(string $module, string $action = 'view'): bool {
+    if (isSuperAdmin()) {
+        return true;
+    }
+
+    // Team management is exclusively for super_admin
+    if ($module === 'team') {
+        return false;
+    }
+
+    $perms = $_SESSION['admin_user']['permissions'] ?? [];
+    if (!isset($perms[$module]) || !is_array($perms[$module])) {
+        return false;
+    }
+
+    $action = strtolower($action);
+    $userActions = array_map('strtolower', $perms[$module]);
+
+    if ($action === 'update') {
+        $action = 'edit';
+    }
+
+    if (in_array($action, $userActions, true)) {
+        return true;
+    }
+
+    // Also support 'update' if user has 'edit'
+    if ($action === 'edit' && in_array('update', $userActions, true)) {
+        return true;
+    }
+
+    return false;
+}
+
+function getFirstPermittedModuleUrl(): string {
+    if (hasPermission('dashboard', 'view')) {
+        return url('modules/dashboard/index.php');
+    }
+
+    foreach (getAllAdminModules() as $key => $info) {
+        if (hasPermission($key, 'view')) {
+            return url($info['url']);
+        }
+    }
+
+    return url('auth/profile.php');
+}
+
+function requirePermission(string $module, string $action = 'view'): void {
+    if (!isLoggedIn()) {
+        flash('error', 'Please login to access the admin panel.');
+        header('Location: ' . BASE_URL . 'auth/login.php');
+        exit;
+    }
+
+    if (!hasPermission($module, $action)) {
+        $actionLabel = match($action) {
+            'add' => 'create/add data in',
+            'edit', 'update' => 'update/edit data in',
+            'delete' => 'delete data in',
+            default => 'access/view'
+        };
+
+        $modInfo = getAllAdminModules()[$module] ?? ['name' => ucfirst($module)];
+        flash('error', "Access Denied: You do not have permission to {$actionLabel} the " . htmlspecialchars($modInfo['name']) . " screen.");
+
+        // If AJAX request, send 403 JSON
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            http_response_code(403);
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Access Denied: You do not have permission to {$actionLabel} this section."
+            ]);
+            exit;
+        }
+
+        // Redirect to first permitted module
+        header('Location: ' . getFirstPermittedModuleUrl());
+        exit;
+    }
+}
+
+function enforceRoutePermission(): void {
+    static $checking = false;
+    if ($checking) {
+        return;
+    }
+    $checking = true;
+
+    if (!isLoggedIn() || isSuperAdmin()) {
+        $checking = false;
+        return;
+    }
+
+    $uri = $_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? '');
+    $path = parse_url($uri, PHP_URL_PATH) ?? '';
+
+    if (preg_match('#/modules/([a-zA-Z0-9_]+)(?:/([a-zA-Z0-9_]+)\.php)?#i', $path, $m)) {
+        $module = strtolower($m[1]);
+        $actionFile = isset($m[2]) ? strtolower($m[2]) : 'index';
+
+        if ($module === 'team') {
+            flash('error', 'Access Denied: Only Super Administrators can manage team members and privileges.');
+            header('Location: ' . getFirstPermittedModuleUrl());
+            exit;
+        }
+
+        $allModules = getAllAdminModules();
+        if (isset($allModules[$module])) {
+            $action = match($actionFile) {
+                'add', 'create', 'new', 'upload' => 'add',
+                'edit', 'update', 'status', 'toggle', 'delete' => 'edit',
+                default => 'view'
+            };
+            requirePermission($module, $action);
+        }
+    }
+
+    $checking = false;
 }
 
 // Flash Messages

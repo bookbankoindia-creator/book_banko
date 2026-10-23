@@ -107,10 +107,12 @@ include __DIR__ . '/../../includes/header.php';
         </h5>
         <p class="text-muted small mb-0">Contains textbook PDFs with page-by-page JEE & NEET question links</p>
     </div>
+    <?php if (hasPermission('textbooks', 'add')): ?>
     <a href="<?= url('modules/chapters/add.php?module_id=' . $textbookModuleId . ($subjectFilter ? '&subject_id=' . $subjectFilter : '')) ?>" class="btn btn-bb-primary btn-sm d-inline-flex align-items-center gap-2">
         <i class="bi bi-cloud-arrow-up-fill"></i>
         <span>Upload New Textbook Chapter</span>
     </a>
+    <?php endif; ?>
 </div>
 
 <div class="bb-card p-3 p-md-4">
@@ -200,12 +202,16 @@ include __DIR__ . '/../../includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td class="text-end">
-                            <a href="<?= url('modules/chapters/edit.php?id=' . $ch['id']) ?>" class="btn btn-sm btn-light border p-1 px-2" title="Edit">
-                                <i class="bi bi-pencil-fill text-primary"></i>
-                            </a>
-                            <a href="<?= url('modules/chapters/delete.php?id=' . $ch['id'] . '&csrf=' . getCSRFToken()) ?>" class="btn btn-sm btn-light border p-1 px-2 text-danger" title="Delete" onclick="return confirm('Delete this chapter?');">
-                                <i class="bi bi-trash-fill"></i>
-                            </a>
+                            <?php if (hasPermission('textbooks', 'edit')): ?>
+                                <a href="<?= url('modules/chapters/edit.php?id=' . $ch['id']) ?>" class="btn btn-sm btn-light border p-1 px-2" title="Edit">
+                                    <i class="bi bi-pencil-fill text-primary"></i>
+                                </a>
+                                <a href="<?= url('modules/chapters/delete.php?id=' . $ch['id'] . '&csrf=' . getCSRFToken()) ?>" class="btn btn-sm btn-light border p-1 px-2 text-danger" title="Delete" onclick="return confirm('Delete this chapter?');">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            <?php else: ?>
+                                <span class="badge bg-light text-secondary border">View Only</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

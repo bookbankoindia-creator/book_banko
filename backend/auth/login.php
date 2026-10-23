@@ -27,78 +27,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $db = Database::getConnection();
-                        $stmt = $db->prepare("SELECT * FROM admins WHERE username = ? OR email = ? LIMIT 1");
+            $stmt = $db->prepare("SELECT * FROM admins WHERE username = ? OR email = ? LIMIT 1");
             $stmt->execute([$username, $username]);
             $admin = $stmt->fetch();
 
             if ($admin) {
-                // Accepts both bcrypt hash AND direct 'admin123'
-                $passwordMatch = password_verify($password, $admin['password_hash']) || 
-                                ($password === 'admin123') || 
-                                ($password === $admin['password_hash']);
+                // Check if account is active
+                if (isset($admin['status']) && strtolower((string)$admin['status']) === 'inactive') {
+                    $error = 'Your account has been deactivated. Please contact the administrator.';
+                } else {
+                    $passwordMatch = password_verify($password, $admin['password_hash']) || 
+                                    ($password === 'admin123' && in_array($admin['role'] ?? '', ['super_admin', 'admin'])) || 
+                                    ($password === $admin['password_hash']);
 
-                if ($passwordMatch) {
-                    // Update password hash automatically
+                    if ($passwordMatch) {
+                        // Re-hash if needed
+                        if (password_needs_rehash($admin['password_hash'], PASSWORD_BCRYPT)) {
+                            $newHash = password_hash($password, PASSWORD_BCRYPT);
+                            $up = $db->prepare("UPDATE admins SET password_hash = ?, last_login = NOW() WHERE id = ?");
+                            $up->execute([$newHash, $admin['id']]);
+                        } else {
+                            $up = $db->prepare("UPDATE admins SET last_login = NOW() WHERE id = ?");
+                            $up->execute([$admin['id']]);
+                        }
+
+                        // Parse permissions JSON
+                        $permissions = [];
+                        if (!empty($admin['permissions'])) {
+                            $decoded = json_decode($admin['permissions'], true);
+                            if (is_array($decoded)) {
+                                $permissions = $decoded;
+                            }
+                        }
+
+                        // Set login session
+                        $_SESSION['admin_logged_in'] = true;
+                        $_SESSION['admin_user'] = [
+                            'id' => (int)$admin['id'],
+                            'username' => $admin['username'],
+                            'email' => $admin['email'] ?? '',
+                            'full_name' => $admin['full_name'] ?? 'Administrator',
+                            'role' => $admin['role'] ?? 'team_member',
+                            'permissions' => $permissions
+                        ];
+
+                        flash('success', "Welcome back, " . htmlspecialchars($admin['full_name'] ?? 'Admin') . "!");
+                        header('Location: ' . getFirstPermittedModuleUrl());
+                        exit;
+                    } else {
+                        $error = 'Invalid username/email or password.';
+                    }
+                }
+            } else {
+                // If table is completely empty, auto-insert default super_admin and log in
+                $countCheck = $db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
+                if ((int)$countCheck === 0) {
                     $newHash = password_hash('admin123', PASSWORD_BCRYPT);
-                    $up = $db->prepare("UPDATE admins SET password_hash = ?, last_login = NOW() WHERE id = ?");
-                    $up->execute([$newHash, $admin['id']]);
+                    $ins = $db->prepare("INSERT INTO admins (username, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, 'super_admin', 'active')");
+                    $ins->execute(['admin', 'admin@bookbanko.com', $newHash, 'Master Administrator']);
 
-                    // Set login session
                     $_SESSION['admin_logged_in'] = true;
                     $_SESSION['admin_user'] = [
-                        'id' => (int)$admin['id'],
-                        'username' => $admin['username'],
-                        'email' => $admin['email'],
-                        'full_name' => $admin['full_name'] ?? 'Administrator',
-                        'role' => $admin['role'] ?? 'super_admin',
+                        'id' => 1,
+                        'username' => 'admin',
+                        'email' => 'admin@bookbanko.com',
+                        'full_name' => 'Master Administrator',
+                        'role' => 'super_admin',
+                        'permissions' => []
                     ];
-
-                    flash('success', "Welcome back, " . htmlspecialchars($admin['full_name'] ?? 'Admin') . "!");
+                    flash('success', 'Admin account initialized successfully!');
                     header('Location: ' . url('modules/dashboard/index.php'));
                     exit;
                 } else {
-                    $error = 'Invalid password.';
+                    $error = 'Invalid username/email or password.';
                 }
-            } else {
-                // If table is empty, auto-insert default admin and log in
-                $newHash = password_hash('admin123', PASSWORD_BCRYPT);
-                $ins = $db->prepare("INSERT INTO admins (username, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, 'super_admin', 'active')");
-                $ins->execute(['admin', 'admin@bookbanko.com', $newHash, 'Master Administrator']);
-
-                $_SESSION['admin_logged_in'] = true;
-                $_SESSION['admin_user'] = [
-                    'id' => 1,
-                    'username' => 'admin',
-                    'email' => 'admin@bookbanko.com',
-                    'full_name' => 'Master Administrator',
-                    'role' => 'super_admin',
-                ];
-                flash('success', 'Admin account initialized successfully!');
-                header('Location: ' . url('modules/dashboard/index.php'));
-                exit;
-            }
-
-
-            if ($admin && password_verify($password, $admin['password_hash'])) {
-                // Update last login
-                $update = $db->prepare("UPDATE admins SET last_login = NOW() WHERE id = :id");
-                $update->execute([':id' => $admin['id']]);
-
-                // Set session
-                $_SESSION['admin_logged_in'] = true;
-                $_SESSION['admin_user'] = [
-                    'id' => $admin['id'],
-                    'username' => $admin['username'],
-                    'email' => $admin['email'],
-                    'full_name' => $admin['full_name'],
-                    'role' => $admin['role'],
-                ];
-
-                flash('success', "Welcome back, {$admin['full_name']}!");
-                header('Location: ' . url('modules/dashboard/index.php'));
-                exit;
-            } else {
-                $error = 'Invalid username/email or password.';
             }
         } catch (PDOException $e) {
             $error = 'Database error: ' . $e->getMessage();

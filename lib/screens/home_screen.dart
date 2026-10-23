@@ -520,7 +520,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         BookBankoCard(
-                          title: 'Study Material',
+                          title: 'Affilated Study Material',
                           subtitle: 'Stationery & Guides',
                           icon: Icons.shopping_bag_rounded,
                           iconColor: AppColors.scienceGreen,
@@ -535,7 +535,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         BookBankoCard(
                           title: 'Competitive Exams',
-                          subtitle: 'JEE, NEET & Govt',
+                          subtitle: 'Goverment',
                           icon: Icons.emoji_events_rounded,
                           iconColor: AppColors.examCrimson,
                           iconBgColor: AppColors.examCrimsonBg,

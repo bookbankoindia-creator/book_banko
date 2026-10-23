@@ -38,7 +38,12 @@
 
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2 rounded-3">
                 <li><a class="dropdown-item py-2" href="<?= url('auth/profile.php') ?>"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                <?php if (isSuperAdmin()): ?>
+                <li><a class="dropdown-item py-2" href="<?= url('modules/team/index.php') ?>"><i class="bi bi-person-fill-gear me-2 text-info"></i>Team & Privileges</a></li>
+                <?php endif; ?>
+                <?php if (hasPermission('settings', 'view')): ?>
                 <li><a class="dropdown-item py-2" href="<?= url('modules/settings/index.php') ?>"><i class="bi bi-gear me-2"></i>System Settings</a></li>
+                <?php endif; ?>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item py-2 text-danger" href="<?= url('auth/logout.php') ?>"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
             </ul>
