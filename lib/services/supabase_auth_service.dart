@@ -78,11 +78,13 @@ class SupabaseAuthService {
 
       // 2. Supabase rate limit exceeded (HTTP 429) or email quota reached
       final responseBody = response.body.toLowerCase();
-      final isRateLimit = response.statusCode == 429 ||
+      final isDeliveryIssue = response.statusCode == 429 ||
+          response.statusCode == 500 ||
           responseBody.contains('rate limit') ||
-          responseBody.contains('over_email_send_rate_limit');
+          responseBody.contains('over_email_send_rate_limit') ||
+          responseBody.contains('error sending');
 
-      if (isRateLimit) {
+      if (isDeliveryIssue) {
         // Generate secure 6-digit OTP for testing & graceful bypass
         final randomCode = (100000 + Random().nextInt(900000)).toString();
         _backupOtps[cleanEmail] = _BackupOtpEntry(
@@ -168,8 +170,8 @@ class SupabaseAuthService {
       );
     }
 
-    // 2. Try standard verification types in Supabase (email, signup, magiclink)
-    final typesToTry = ['email', 'signup', 'magiclink'];
+    // 2. Try standard verification types in Supabase (magiclink first for OTP, then email, signup)
+    final typesToTry = ['magiclink', 'email', 'signup'];
 
     for (final type in typesToTry) {
       try {
