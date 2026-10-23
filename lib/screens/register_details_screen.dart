@@ -109,6 +109,8 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
 
       if (!mounted) return;
 
+      ScaffoldMessenger.of(context).clearSnackBars();
+
       // Navigate to choose education board
       Navigator.pushNamedAndRemoveUntil(
         context,

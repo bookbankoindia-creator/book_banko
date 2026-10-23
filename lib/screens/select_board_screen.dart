@@ -25,6 +25,11 @@ class _SelectBoardScreenState extends State<SelectBoardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+    });
     _cachedBoards = ApiService.getCachedBoards();
     _loadBoards();
   }

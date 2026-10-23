@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../models/app_state.dart';
 import '../models/data_models.dart';
 import '../theme/app_theme.dart';
-import '../widgets/logo_widget.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -20,7 +19,9 @@ class ProfileScreen extends StatelessWidget {
         ? user.username.trim().substring(0, 1).toUpperCase()
         : 'S';
 
-    final activeStd = appState.activeStandardNumber > 0 ? appState.activeStandardNumber : 11;
+    final activeStd = appState.activeStandardNumber > 0
+        ? appState.activeStandardNumber
+        : 11;
     final streamDisplay = (activeStd == 11 || activeStd == 12)
         ? (appState.selectedStreamName ?? 'Science')
         : null;
@@ -43,7 +44,9 @@ class ProfileScreen extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x1F0F172A),
@@ -89,26 +92,18 @@ class ProfileScreen extends StatelessWidget {
                                 letterSpacing: -0.4,
                               ),
                             ),
-                            Text(
-                              'Academic Account & Learning Settings',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF93C5FD),
-                              ),
-                            ),
                           ],
                         ),
                       ),
                       // Small Book Banko Logo watermark
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const BookBankoLogo(size: 24),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.all(6),
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.white.withValues(alpha: 0.12),
+                      //     borderRadius: BorderRadius.circular(12),
+                      //   ),
+                      //   child: const BookBankoLogo(size: 24),
+                      // ),
                     ],
                   ),
                 ),
@@ -128,7 +123,10 @@ class ProfileScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.2,
+                        ),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x0A0F172A),
@@ -137,7 +135,10 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 22,
+                      ),
                       child: Column(
                         children: [
                           // Large Circular Avatar with initial and outer ring
@@ -150,14 +151,21 @@ class ProfileScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                                    colors: [
+                                      Color(0xFF0F172A),
+                                      Color(0xFF1E3A8A),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
-                                  border: Border.all(color: Colors.white, width: 3.5),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3.5,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.28),
+                                      color: const Color(0xFF1E3A8A)
+                                          .withValues(alpha: 0.28),
                                       blurRadius: 16,
                                       offset: const Offset(0, 6),
                                     ),
@@ -180,7 +188,10 @@ class ProfileScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
                                 ),
                                 child: const Icon(
                                   Icons.verified_user_rounded,
@@ -208,12 +219,17 @@ class ProfileScreen extends StatelessWidget {
                           // Email ID with tap to copy
                           InkWell(
                             onTap: () {
-                              final email = user?.email ?? 'student@bookbanko.com';
+                              final email =
+                                  user?.email ?? 'student@bookbanko.com';
                               Clipboard.setData(ClipboardData(text: email));
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Email copied to clipboard: $email',
-                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                                  content: Text(
+                                    'Email copied to clipboard: $email',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                   duration: const Duration(seconds: 2),
                                   backgroundColor: const Color(0xFF0F172A),
                                 ),
@@ -221,7 +237,10 @@ class ProfileScreen extends StatelessWidget {
                             },
                             borderRadius: BorderRadius.circular(10),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -244,7 +263,11 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                  const Icon(
+                                    Icons.copy_rounded,
+                                    size: 12,
+                                    color: Color(0xFF94A3B8),
+                                  ),
                                 ],
                               ),
                             ),
@@ -258,11 +281,16 @@ class ProfileScreen extends StatelessWidget {
                             runSpacing: 6,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFEFF6FF),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: const Color(0xFFDBEAFE)),
+                                  border: Border.all(
+                                    color: const Color(0xFFDBEAFE),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -286,11 +314,16 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFECFDF5),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  border: Border.all(
+                                    color: const Color(0xFFA7F3D0),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -338,7 +371,9 @@ class ProfileScreen extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
                                   boxShadow: const [
                                     BoxShadow(
                                       color: Color(0x060F172A),
@@ -352,13 +387,16 @@ class ProfileScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFEFF6FF),
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           child: const Icon(
                                             Icons.menu_book_rounded,
@@ -367,25 +405,37 @@ class ProfileScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 3,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF1F5F9),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
                                                 'Change',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: const Color(0xFF475569),
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: const Color(
+                                                        0xFF475569,
+                                                      ),
+                                                    ),
                                               ),
                                               const SizedBox(width: 2),
-                                              const Icon(Icons.arrow_forward_ios_rounded,
-                                                  size: 8, color: Color(0xFF475569)),
+                                              const Icon(
+                                                Icons.arrow_forward_ios_rounded,
+                                                size: 8,
+                                                color: Color(0xFF475569),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -403,7 +453,9 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      appState.selectedBoard.isNotEmpty ? appState.selectedBoard : 'GSEB',
+                                      appState.selectedBoard.isNotEmpty
+                                          ? appState.selectedBoard
+                                          : 'GSEB',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
@@ -436,7 +488,10 @@ class ProfileScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             elevation: 0,
                             child: InkWell(
-                              onTap: () => _showStandardSelectionSheet(context, appState),
+                              onTap: () => _showStandardSelectionSheet(
+                                context,
+                                appState,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                               splashColor: const Color(0xFFFEF3C7),
                               highlightColor: const Color(0xFFFFFBEB),
@@ -448,7 +503,10 @@ class ProfileScreen extends StatelessWidget {
                                     width: 1.5,
                                   ),
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFFFFFFF), Color(0xFFFFFDF5)],
+                                    colors: [
+                                      Color(0xFFFFFFFF),
+                                      Color(0xFFFFFDF5),
+                                    ],
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                   ),
@@ -465,13 +523,16 @@ class ProfileScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFFEF3C7),
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           child: const Icon(
                                             Icons.workspace_premium_rounded,
@@ -481,13 +542,19 @@ class ProfileScreen extends StatelessWidget {
                                         ),
                                         // Interactive "Tap to Change" Badge
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 7,
+                                            vertical: 3.5,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF59E0B),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                                                color: const Color(0xFFF59E0B)
+                                                    .withValues(alpha: 0.3),
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 1),
                                               ),
@@ -496,15 +563,21 @@ class ProfileScreen extends StatelessWidget {
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(Icons.edit_rounded, size: 10, color: Colors.white),
+                                              const Icon(
+                                                Icons.edit_rounded,
+                                                size: 10,
+                                                color: Colors.white,
+                                              ),
                                               const SizedBox(width: 3),
                                               Text(
                                                 'Tap to edit',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 9.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.white,
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 9.5,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Colors.white,
+                                                    ),
                                               ),
                                             ],
                                           ),
@@ -532,7 +605,9 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      streamDisplay != null ? '$streamDisplay Stream' : 'Active Curriculum',
+                                      streamDisplay != null
+                                          ? '$streamDisplay Stream'
+                                          : 'Active Curriculum',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w600,
@@ -573,7 +648,11 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primary),
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'EDUCATIONAL INFORMATION',
@@ -602,9 +681,14 @@ class ProfileScreen extends StatelessWidget {
                           _buildDetailRow(
                             icon: Icons.location_on_outlined,
                             label: 'Location',
-                            value: user != null && (user.city.isNotEmpty || user.district.isNotEmpty)
+                            value:
+                                user != null &&
+                                    (user.city.isNotEmpty ||
+                                        user.district.isNotEmpty)
                                 ? '${user.city}, ${user.district}, ${user.state}'
-                                : (user?.state.isNotEmpty == true ? user!.state : 'Gujarat'),
+                                : (user?.state.isNotEmpty == true
+                                      ? user!.state
+                                      : 'Gujarat'),
                           ),
                           const Divider(height: 20, color: Color(0xFFF1F5F9)),
 
@@ -620,7 +704,9 @@ class ProfileScreen extends StatelessWidget {
                           _buildDetailRow(
                             icon: Icons.science_outlined,
                             label: 'Current Stream',
-                            value: streamDisplay != null ? '$streamDisplay Stream' : 'General / Foundation',
+                            value: streamDisplay != null
+                                ? '$streamDisplay Stream'
+                                : 'General / Foundation',
                           ),
                         ],
                       ),
@@ -639,7 +725,10 @@ class ProfileScreen extends StatelessWidget {
                               onPressed: () {
                                 Navigator.pushNamed(context, '/edit_profile');
                               },
-                              icon: const Icon(Icons.edit_note_rounded, size: 20),
+                              icon: const Icon(
+                                Icons.edit_note_rounded,
+                                size: 20,
+                              ),
                               label: Text(
                                 'Edit Profile',
                                 style: GoogleFonts.plusJakartaSans(
@@ -649,7 +738,10 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primary,
-                                side: const BorderSide(color: AppColors.primary, width: 1.5),
+                                side: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -670,7 +762,8 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+                                  color: const Color(0xFF1E3A8A)
+                                      .withValues(alpha: 0.3),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -680,7 +773,11 @@ class ProfileScreen extends StatelessWidget {
                               onPressed: () {
                                 Navigator.pushNamed(context, '/select_board');
                               },
-                              icon: const Icon(Icons.tune_rounded, size: 18, color: Colors.white),
+                              icon: const Icon(
+                                Icons.tune_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                               label: Text(
                                 'Change Board',
                                 style: GoogleFonts.plusJakartaSans(
@@ -710,7 +807,11 @@ class ProfileScreen extends StatelessWidget {
                       height: 48,
                       child: OutlinedButton.icon(
                         onPressed: () => _confirmLogOut(context),
-                        icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFF475569)),
+                        icon: const Icon(
+                          Icons.logout_rounded,
+                          size: 18,
+                          color: Color(0xFF475569),
+                        ),
                         label: Text(
                           'Log Out',
                           style: GoogleFonts.plusJakartaSans(
@@ -721,7 +822,10 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         style: OutlinedButton.styleFrom(
                           backgroundColor: const Color(0xFFF8FAFC),
-                          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+                          side: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                            width: 1.2,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -737,7 +841,11 @@ class ProfileScreen extends StatelessWidget {
                       height: 48,
                       child: TextButton.icon(
                         onPressed: () => _confirmDeleteAccount(context),
-                        icon: const Icon(Icons.delete_forever_rounded, size: 20, color: Color(0xFFDC2626)),
+                        icon: const Icon(
+                          Icons.delete_forever_rounded,
+                          size: 20,
+                          color: Color(0xFFDC2626),
+                        ),
                         label: Text(
                           'Delete Account',
                           style: GoogleFonts.plusJakartaSans(
@@ -750,7 +858,10 @@ class ProfileScreen extends StatelessWidget {
                           backgroundColor: const Color(0xFFFEF2F2),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(color: Color(0xFFFECACA), width: 1.2),
+                            side: const BorderSide(
+                              color: Color(0xFFFECACA),
+                              width: 1.2,
+                            ),
                           ),
                         ),
                       ),
@@ -768,7 +879,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   /// Displays the interactive Grade Selection bottom sheet showing ONLY Standard 10, 11, and 12
-  void _showStandardSelectionSheet(BuildContext context, BookBankoAppState appState) {
+  void _showStandardSelectionSheet(
+    BuildContext context,
+    BookBankoAppState appState,
+  ) {
     int currentStd = appState.activeStandardNumber;
     if (currentStd != 10 && currentStd != 11 && currentStd != 12) {
       currentStd = 11;
@@ -865,7 +979,10 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: () => Navigator.pop(modalCtx),
-                          icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFF94A3B8),
+                          ),
                           style: IconButton.styleFrom(
                             backgroundColor: const Color(0xFFF1F5F9),
                             padding: const EdgeInsets.all(6),
@@ -895,7 +1012,8 @@ class ProfileScreen extends StatelessWidget {
                       standardNumber: 11,
                       title: 'Standard 11',
                       badge: 'Higher Secondary (HSC)',
-                      description: 'Class 11 Foundation • Science, Commerce & Arts',
+                      description:
+                          'Class 11 Foundation • Science, Commerce & Arts',
                       icon: Icons.science_rounded,
                       accentColor: const Color(0xFF2563EB),
                       isSelected: selectedStd == 11,
@@ -909,7 +1027,8 @@ class ProfileScreen extends StatelessWidget {
                       standardNumber: 12,
                       title: 'Standard 12',
                       badge: 'Board Exam (HSC)',
-                      description: 'Higher Secondary Final Year • Board Exam Curriculum',
+                      description:
+                          'Higher Secondary Final Year • Board Exam Curriculum',
                       icon: Icons.workspace_premium_rounded,
                       accentColor: const Color(0xFFD97706),
                       isSelected: selectedStd == 12,
@@ -933,7 +1052,11 @@ class ProfileScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.tune_rounded, size: 15, color: AppColors.primary),
+                                const Icon(
+                                  Icons.tune_rounded,
+                                  size: 15,
+                                  color: AppColors.primary,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Choose Stream for Standard $selectedStd:',
@@ -952,16 +1075,22 @@ class ProfileScreen extends StatelessWidget {
                                   stream: StreamType.science,
                                   title: 'Science',
                                   icon: Icons.biotech_rounded,
-                                  isSelected: selectedStream == StreamType.science,
-                                  onTap: () => setModalState(() => selectedStream = StreamType.science),
+                                  isSelected:
+                                      selectedStream == StreamType.science,
+                                  onTap: () => setModalState(
+                                    () => selectedStream = StreamType.science,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 _buildStreamChip(
                                   stream: StreamType.commerce,
                                   title: 'Commerce',
                                   icon: Icons.trending_up_rounded,
-                                  isSelected: selectedStream == StreamType.commerce,
-                                  onTap: () => setModalState(() => selectedStream = StreamType.commerce),
+                                  isSelected:
+                                      selectedStream == StreamType.commerce,
+                                  onTap: () => setModalState(
+                                    () => selectedStream = StreamType.commerce,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 _buildStreamChip(
@@ -969,7 +1098,9 @@ class ProfileScreen extends StatelessWidget {
                                   title: 'Arts',
                                   icon: Icons.palette_outlined,
                                   isSelected: selectedStream == StreamType.arts,
-                                  onTap: () => setModalState(() => selectedStream = StreamType.arts),
+                                  onTap: () => setModalState(
+                                    () => selectedStream = StreamType.arts,
+                                  ),
                                 ),
                               ],
                             ),
@@ -992,7 +1123,8 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                              color: const Color(0xFF1E3A8A)
+                                  .withValues(alpha: 0.35),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -1014,7 +1146,11 @@ class ProfileScreen extends StatelessWidget {
                                 SnackBar(
                                   content: Row(
                                     children: [
-                                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
@@ -1029,13 +1165,19 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                   backgroundColor: const Color(0xFF059669),
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   duration: const Duration(seconds: 3),
                                 ),
                               );
                             }
                           },
-                          icon: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           label: Text(
                             'Save & Switch to Standard $selectedStd',
                             style: GoogleFonts.plusJakartaSans(
@@ -1083,7 +1225,9 @@ class ProfileScreen extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: isSelected ? accentColor.withValues(alpha: 0.05) : Colors.white,
+            color: isSelected
+                ? accentColor.withValues(alpha: 0.05)
+                : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: isSelected ? accentColor : const Color(0xFFE2E8F0),
@@ -1113,7 +1257,9 @@ class ProfileScreen extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isSelected ? accentColor : accentColor.withValues(alpha: 0.12),
+                  color: isSelected
+                      ? accentColor
+                      : accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -1138,12 +1284,17 @@ class ProfileScreen extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: isSelected ? accentColor : AppColors.textPrimary,
+                            color: isSelected
+                                ? accentColor
+                                : AppColors.textPrimary,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: accentColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
@@ -1264,18 +1415,29 @@ class ProfileScreen extends StatelessWidget {
                 color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.logout_rounded, color: Color(0xFF334155), size: 22),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFF334155),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
               'Log Out?',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
             ),
           ],
         ),
         content: Text(
           'Are you sure you want to log out of Book Banko? You can log back in anytime with your credentials.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: AppColors.textSecondary, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -1283,25 +1445,40 @@ class ProfileScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final appState = Provider.of<BookBankoAppState>(context, listen: false);
+              final appState = Provider.of<BookBankoAppState>(
+                context,
+                listen: false,
+              );
               await appState.logOut();
               if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text(
               'Log Out',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: Colors.white),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -1322,18 +1499,30 @@ class ProfileScreen extends StatelessWidget {
                 color: const Color(0xFFFEE2E2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFDC2626),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
               'Delete Account?',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFFDC2626)),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: const Color(0xFFDC2626),
+              ),
             ),
           ],
         ),
         content: Text(
           'This will permanently erase your profile, reading history, and saved preferences. This action cannot be undone.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: AppColors.textSecondary, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -1341,31 +1530,51 @@ class ProfileScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final appState = Provider.of<BookBankoAppState>(context, listen: false);
+              final appState = Provider.of<BookBankoAppState>(
+                context,
+                listen: false,
+              );
               await appState.deleteAccount();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Your account has been deleted permanently.', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                    content: Text(
+                      'Your account has been deleted permanently.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     backgroundColor: const Color(0xFFDC2626),
                   ),
                 );
-                Navigator.pushNamedAndRemoveUntil(context, '/signup_email', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/signup_email',
+                  (route) => false,
+                );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text(
               'Delete Permanently',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: Colors.white),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
