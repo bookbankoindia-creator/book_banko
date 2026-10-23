@@ -196,6 +196,13 @@ class BookBankoAppState extends ChangeNotifier {
     if (_currentUser != null) {
       _currentUser = _currentUser!.copyWith(standard: number);
       PreferenceService.saveUserData(_currentUser!);
+      if (_currentUser!.email.isNotEmpty) {
+        ApiService.updateStudentStandard(
+          email: _currentUser!.email,
+          standard: number,
+          stream: _selectedStreamName,
+        );
+      }
     }
     notifyListeners();
   }

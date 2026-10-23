@@ -1278,4 +1278,36 @@ class ApiService {
       return {'status': 'error', 'message': 'Network connection issue: $e'};
     }
   }
+
+  /// Update student active standard in database
+  static Future<Map<String, dynamic>> updateStudentStandard({
+    required String email,
+    required int standard,
+    String? stream,
+  }) async {
+    try {
+      final workingBase = baseUrl;
+      final uri = Uri.parse('$workingBase/update_standard.php');
+      final payload = <String, dynamic>{
+        'email': email.trim(),
+        'standard': standard,
+      };
+      if (stream != null && stream.isNotEmpty) {
+        payload['stream'] = stream;
+      }
+
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 8));
+
+      final decoded = json.decode(response.body);
+      return Map<String, dynamic>.from(decoded);
+    } catch (e) {
+      debugPrint('[ApiService] updateStudentStandard notice: $e');
+      return {'status': 'offline', 'message': 'Saved locally'};
+    }
+  }
 }
+
