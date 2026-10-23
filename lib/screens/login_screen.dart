@@ -170,13 +170,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (result.success) {
       setState(() {
         _otpSent = true;
+        if (result.isRateLimited && result.backupOtp != null) {
+          _otpController.text = result.backupOtp!;
+          Clipboard.setData(ClipboardData(text: result.backupOtp!));
+        }
       });
       _startResendTimer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.mark_email_read_rounded, color: Colors.white, size: 20),
+              Icon(
+                result.isRateLimited ? Icons.info_rounded : Icons.mark_email_read_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -186,8 +194,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF0D9488),
+          backgroundColor: result.isRateLimited ? const Color(0xFF2563EB) : const Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: result.isRateLimited ? 6 : 4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
@@ -557,12 +566,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     setModalState(() => isSending = false);
 
                                     if (res.success) {
-                                      setModalState(() => forgotOtpSent = true);
+                                      setModalState(() {
+                                        forgotOtpSent = true;
+                                        if (res.isRateLimited && res.backupOtp != null) {
+                                          forgotOtpController.text = res.backupOtp!;
+                                          Clipboard.setData(ClipboardData(text: res.backupOtp!));
+                                        }
+                                      });
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('6-digit code sent to $email.', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
-                                            backgroundColor: const Color(0xFF0D9488),
+                                            content: Text(res.message, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                                            backgroundColor: res.isRateLimited ? const Color(0xFF2563EB) : const Color(0xFF0D9488),
+                                            duration: Duration(seconds: res.isRateLimited ? 6 : 3),
                                           ),
                                         );
                                       }
@@ -1304,16 +1320,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 16),
 
-                // Password with Standard 8-Character Pattern
+                // Password Input (Supports standard registered passwords)
                 _buildInputLabel('Password', isRequired: true),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _signInPasswordController,
                   obscureText: _signInObscurePassword,
-                  maxLength: 8,
+                  maxLength: 32,
                   buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                   inputFormatters: [
-                    LengthLimitingTextInputFormatter(8),
+                    LengthLimitingTextInputFormatter(32),
                   ],
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.5,
@@ -1321,7 +1337,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     color: AppColors.textPrimary,
                   ),
                   decoration: _buildInputDecoration(
-                    hint: 'Enter 8-character password',
+                    hint: 'Enter your password (e.g. 6 to 8 characters)',
                     icon: Icons.lock_rounded,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -1341,15 +1357,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     if (val == null || val.trim().isEmpty) {
                       return 'Please enter password';
                     }
-                    if (val.trim().length != 8) {
-                      return 'Password must be exactly 8 characters';
+                    if (val.trim().length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 4),
 
-                // Helper text for 8-character pattern
+                // Helper text
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1360,7 +1376,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        'Standard 8 characters (letters, numbers & special characters can all be used)',
+                        'Enter your account password (at least 6 characters)',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
@@ -1787,10 +1803,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    maxLength: 8,
+                    maxLength: 32,
                     buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                     inputFormatters: [
-                      LengthLimitingTextInputFormatter(8),
+                      LengthLimitingTextInputFormatter(_isEditMode ? 32 : 8),
                     ],
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14.5,
@@ -1798,7 +1814,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       color: AppColors.textPrimary,
                     ),
                     decoration: _buildInputDecoration(
-                      hint: 'Enter 8-character password',
+                      hint: _isEditMode ? 'Enter password (at least 6 characters)' : 'Enter 8-character password',
                       icon: Icons.lock_rounded,
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -1818,8 +1834,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       if (val == null || val.trim().isEmpty) {
                         return 'Please enter password';
                       }
-                      if (val.trim().length != 8) {
-                        return 'Password must be exactly 8 characters';
+                      if (_isEditMode) {
+                        if (val.trim().length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                      } else {
+                        if (val.trim().length != 8) {
+                          return 'Password must be standard 8 characters';
+                        }
                       }
                       return null;
                     },
