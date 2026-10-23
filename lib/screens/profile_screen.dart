@@ -736,7 +736,7 @@ class ProfileScreen extends StatelessWidget {
                             height: 48,
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                Navigator.pushNamed(context, '/login');
+                                Navigator.pushNamed(context, '/edit_profile');
                               },
                               icon: const Icon(Icons.edit_note_rounded, size: 20),
                               label: Text(
@@ -1455,7 +1455,7 @@ class ProfileScreen extends StatelessWidget {
                     backgroundColor: const Color(0xFFDC2626),
                   ),
                 );
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(context, '/signup_email', (route) => false);
               }
             },
             style: ElevatedButton.styleFrom(

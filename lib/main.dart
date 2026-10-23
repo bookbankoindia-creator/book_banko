@@ -20,6 +20,11 @@ import 'screens/competitive_exams_screen.dart';
 import 'screens/higher_education_screen.dart';
 import 'screens/ai_course_standards_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/signup_email_screen.dart';
+import 'screens/otp_verification_screen.dart';
+import 'screens/register_details_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/edit_profile_screen.dart';
 import 'services/ad_service.dart';
 import 'services/api_services.dart';
 
@@ -64,6 +69,11 @@ class BookBankoApp extends StatelessWidget {
         '/higher_education': (context) => const HigherEducationScreen(),
         '/ai_course_standards': (context) => const AiCourseStandardsScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/signup_email': (context) => const SignupEmailScreen(),
+        '/otp_verification': (context) => const OtpVerificationScreen(),
+        '/register_details': (context) => const RegisterDetailsScreen(),
+        '/forgot_password': (context) => const ForgotPasswordScreen(),
+        '/edit_profile': (context) => const EditProfileScreen(),
       },
     );
   }
