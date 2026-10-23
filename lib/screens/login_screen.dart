@@ -27,23 +27,75 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    _loginController.addListener(_onFieldChanged);
+    _passwordController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _loginController.removeListener(_onFieldChanged);
+    _passwordController.removeListener(_onFieldChanged);
     _loginController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
+
+  bool get _isBothFieldsFilled =>
+      _loginController.text.trim().isNotEmpty &&
+      _passwordController.text.trim().length == 8;
 
   Future<void> _handleSignIn() async {
     setState(() {
       _errorMessage = null;
     });
 
-    if (!_formKey.currentState!.validate()) {
+    final login = _loginController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Strict validation: both fields must be filled
+    if (login.isEmpty && password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter both your Email/Username and 8-character Password.';
+      });
+      _formKey.currentState?.validate();
       return;
     }
 
-    final login = _loginController.text.trim();
-    final password = _passwordController.text.trim();
+    if (login.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email or username.';
+      });
+      _formKey.currentState?.validate();
+      return;
+    }
+
+    if (password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your 8-character password.';
+      });
+      _formKey.currentState?.validate();
+      return;
+    }
+
+    if (password.length != 8) {
+      setState(() {
+        _errorMessage = 'Password must be exactly 8 characters (currently ${password.length}).';
+      });
+      _formKey.currentState?.validate();
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -285,6 +337,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
+                            maxLength: 8,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(8),
+                            ],
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _handleSignIn(),
                             style: GoogleFonts.plusJakartaSans(
@@ -293,7 +349,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'Enter your password',
+                              counterText: '',
+                              hintText: 'Enter 8-character password',
+                              helperText: 'Standard 8-character password',
+                              helperStyle: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFF64748B),
+                                fontSize: 11.5,
+                              ),
                               hintStyle: GoogleFonts.plusJakartaSans(
                                 color: const Color(0xFF94A3B8),
                                 fontSize: 13.5,
@@ -333,7 +395,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
-                                return 'Please enter your password.';
+                                return 'Please enter your 8-character password.';
+                              }
+                              if (val.trim().length != 8) {
+                                return 'Password must be exactly 8 characters.';
                               }
                               return null;
                             },
@@ -371,14 +436,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 52,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                              gradient: LinearGradient(
+                                colors: _isBothFieldsFilled
+                                    ? const [Color(0xFF0F172A), Color(0xFF1E3A8A)]
+                                    : const [Color(0xFF475569), Color(0xFF64748B)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                  color: (_isBothFieldsFilled ? const Color(0xFF1E3A8A) : const Color(0xFF64748B))
+                                      .withValues(alpha: 0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
