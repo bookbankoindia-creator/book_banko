@@ -60,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (login.isEmpty && password.isEmpty) {
       setState(() {
         _errorMessage =
-            'Please enter both your Email/Username and 8-character Password.';
+            'Please enter both your Email and 8-character Password.';
       });
       _formKey.currentState?.validate();
       return;
@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (login.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter your email or username.';
+        _errorMessage = 'Please enter your email.';
       });
       _formKey.currentState?.validate();
       return;
@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (password.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter your 8-character password.';
+        _errorMessage = 'Please enter your password.';
       });
       _formKey.currentState?.validate();
       return;
@@ -210,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 18),
 
                   Text(
-                    'Welcome Back',
+                    'Welcome Book Banko',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 6),
 
                   Text(
-                    'Sign in to access your textbooks, notes & materials',
+                    'Sign in to access your textbooks and materials',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
@@ -387,8 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             decoration: InputDecoration(
                               counterText: '',
-                              hintText: 'Enter 8-character password',
-                              helperText: 'Standard 8-character password',
+                              hintText: 'Enter your password',
                               helperStyle: GoogleFonts.plusJakartaSans(
                                 color: const Color(0xFF64748B),
                                 fontSize: 11.5,
@@ -498,7 +497,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                  color: const Color(0xFF1E3A8A)
+                                      .withValues(alpha: 0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),

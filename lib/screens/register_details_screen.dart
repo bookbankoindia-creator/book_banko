@@ -43,18 +43,6 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
     'Karnataka',
     'Tamil Nadu',
     'West Bengal',
-    'Bihar',
-    'Andhra Pradesh',
-    'Telangana',
-    'Kerala',
-    'Odisha',
-    'Assam',
-    'Chhattisgarh',
-    'Jharkhand',
-    'Uttarakhand',
-    'Himachal Pradesh',
-    'Goa',
-    'Other State',
   ];
 
   @override
@@ -88,7 +76,8 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
 
     if (!_isAcknowledged) {
       setState(() {
-        _errorMessage = 'Please confirm the acknowledgement checkbox to proceed.';
+        _errorMessage =
+            'Please confirm the acknowledgement checkbox to proceed.';
       });
       return;
     }
@@ -111,35 +100,21 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
         acknowledged: _isAcknowledged,
         board: appState.selectedBoard,
         medium: appState.selectedMedium,
-        standard: appState.activeStandardNumber > 0 ? appState.activeStandardNumber : null,
+        standard: appState.activeStandardNumber > 0
+            ? appState.activeStandardNumber
+            : null,
       );
 
       appState.setCurrentUser(user);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.school_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Welcome, ${user.username}! Let\'s choose your Education Board.',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-
       // Navigate to choose education board
-      Navigator.pushNamedAndRemoveUntil(context, '/select_board', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/select_board',
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -169,7 +144,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x1F0F172A),
@@ -189,7 +166,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: const BookBankoLogo(size: 26),
                       ),
@@ -236,7 +215,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                     children: [
                       // Verified Email Banner
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0FDF4),
                           borderRadius: BorderRadius.circular(16),
@@ -244,7 +226,11 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 22),
+                            const Icon(
+                              Icons.verified_user_rounded,
+                              color: Color(0xFF16A34A),
+                              size: 22,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -270,7 +256,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFDCFCE7),
                                 borderRadius: BorderRadius.circular(8),
@@ -299,7 +288,11 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.error,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -322,7 +315,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.2,
+                          ),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x0A0F172A),
@@ -347,11 +343,17 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             const SizedBox(height: 16),
 
                             // 1. Full Name
-                            _buildInputLabel('Student / Username', isRequired: true),
+                            _buildInputLabel(
+                              'Student / Username',
+                              isRequired: true,
+                            ),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _usernameController,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                               decoration: _buildInputDecoration(
                                 hint: 'e.g. Rahul Sharma',
                                 icon: Icons.person_rounded,
@@ -370,23 +372,36 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             const SizedBox(height: 16),
 
                             // 2. Password (Standard 8-Character Pattern)
-                            _buildInputLabel('Create Password', isRequired: true),
+                            _buildInputLabel(
+                              'Create Password',
+                              isRequired: true,
+                            ),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               maxLength: 8,
-                              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                              buildCounter: (
+                                context, {
+                                required currentLength,
+                                required isFocused,
+                                maxLength,
+                              }) => null,
                               inputFormatters: [
                                 LengthLimitingTextInputFormatter(8),
                               ],
-                              style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                               decoration: _buildInputDecoration(
-                                hint: 'Enter standard 8-character password',
+                                hint: 'Enter Your password',
                                 icon: Icons.lock_rounded,
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                    _obscurePassword
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
                                     color: AppColors.textMuted,
                                     size: 20,
                                   ),
@@ -408,19 +423,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.textSecondary),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    'Standard 8 characters (letters, numbers & special characters can all be used)',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppColors.textSecondary),
-                                  ),
-                                ),
-                              ],
-                            ),
+
                             const SizedBox(height: 16),
 
                             // 3. School Name
@@ -428,7 +431,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _schoolController,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                               decoration: _buildInputDecoration(
                                 hint: 'e.g. Sardar Patel High School',
                                 icon: Icons.school_rounded,
@@ -447,7 +453,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             _buildInputLabel('State', isRequired: true),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
-                              initialValue: _indianStates.contains(_stateController.text) ? _stateController.text : 'Gujarat',
+                              initialValue:
+                                  _indianStates.contains(_stateController.text)
+                                  ? _stateController.text
+                                  : 'Gujarat',
                               items: _indianStates.map((state) {
                                 return DropdownMenuItem(
                                   value: state,
@@ -480,20 +489,28 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      _buildInputLabel('District', isRequired: true),
+                                      _buildInputLabel(
+                                        'District',
+                                        isRequired: true,
+                                      ),
                                       const SizedBox(height: 6),
                                       TextFormField(
                                         controller: _districtController,
-                                        style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.w600),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                         decoration: _buildInputDecoration(
                                           hint: 'e.g. Ahmedabad',
                                           icon: Icons.location_city_rounded,
                                         ),
                                         textInputAction: TextInputAction.next,
                                         validator: (val) {
-                                          if (val == null || val.trim().isEmpty) {
+                                          if (val == null ||
+                                              val.trim().isEmpty) {
                                             return 'Required';
                                           }
                                           return null;
@@ -505,20 +522,28 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      _buildInputLabel('City', isRequired: true),
+                                      _buildInputLabel(
+                                        'City',
+                                        isRequired: true,
+                                      ),
                                       const SizedBox(height: 6),
                                       TextFormField(
                                         controller: _cityController,
-                                        style: GoogleFonts.plusJakartaSans(fontSize: 14.5, fontWeight: FontWeight.w600),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                         decoration: _buildInputDecoration(
                                           hint: 'e.g. Visnagar',
                                           icon: Icons.place_rounded,
                                         ),
                                         textInputAction: TextInputAction.done,
                                         validator: (val) {
-                                          if (val == null || val.trim().isEmpty) {
+                                          if (val == null ||
+                                              val.trim().isEmpty) {
                                             return 'Required';
                                           }
                                           return null;
@@ -537,7 +562,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +577,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                       });
                                     },
                                     activeColor: AppColors.primary,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
                                   Expanded(
                                     child: GestureDetector(
@@ -560,7 +589,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                         });
                                       },
                                       child: Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
+                                        padding: const EdgeInsets.only(
+                                          top: 8.0,
+                                        ),
                                         child: Text(
                                           'I acknowledge that the educational details provided above are accurate and will be used for my student curriculum.',
                                           style: GoogleFonts.plusJakartaSans(
@@ -586,11 +617,15 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                                    colors: [
+                                      Color(0xFF0F172A),
+                                      Color(0xFF1E3A8A),
+                                    ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                      color: const Color(0xFF1E3A8A)
+                                          .withValues(alpha: 0.35),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -602,11 +637,20 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
                                         )
-                                      : const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                                      : const Icon(
+                                          Icons.arrow_forward_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
                                   label: Text(
-                                    _isSaving ? 'Saving Profile...' : 'Continue to Choose Education Board',
+                                    _isSaving
+                                        ? 'Saving Profile...'
+                                        : 'Continue to Choose Education Board',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14.5,
@@ -651,7 +695,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
         if (isRequired)
           const Text(
             ' *',
-            style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.error,
+              fontWeight: FontWeight.bold,
+            ),
           ),
       ],
     );

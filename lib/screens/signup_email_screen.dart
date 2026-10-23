@@ -58,7 +58,9 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
           content: Row(
             children: [
               Icon(
-                res.isRateLimited ? Icons.info_rounded : Icons.mark_email_read_rounded,
+                res.isRateLimited
+                    ? Icons.info_rounded
+                    : Icons.mark_email_read_rounded,
                 color: Colors.white,
                 size: 20,
               ),
@@ -66,15 +68,22 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
               Expanded(
                 child: Text(
                   res.message,
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
           ),
-          backgroundColor: res.isRateLimited ? const Color(0xFF2563EB) : const Color(0xFF0D9488),
+          backgroundColor: res.isRateLimited
+              ? const Color(0xFF2563EB)
+              : const Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: res.isRateLimited ? 6 : 4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
@@ -85,7 +94,9 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
         arguments: {
           'email': email,
           'isForgotPassword': false,
-          'initialOtp': (res.isRateLimited && res.backupOtp != null) ? res.backupOtp : '',
+          'initialOtp': (res.isRateLimited && res.backupOtp != null)
+              ? res.backupOtp
+              : '',
         },
       );
     } else {
@@ -115,7 +126,9 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x1F0F172A),
@@ -130,22 +143,14 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.15),
-                          padding: const EdgeInsets.all(8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: const BookBankoLogo(size: 26),
                       ),
@@ -161,14 +166,6 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.4,
-                              ),
-                            ),
-                            Text(
-                              'Step 1 of 3: Email Verification',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF93C5FD),
                               ),
                             ),
                           ],
@@ -192,7 +189,10 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                     children: [
                       // Step Progress Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(20),
@@ -201,7 +201,11 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified_outlined, size: 14, color: AppColors.primary),
+                            const Icon(
+                              Icons.verified_outlined,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'SECURE SUPABASE EMAIL AUTH',
@@ -222,7 +226,10 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.2,
+                          ),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x0A0F172A),
@@ -262,11 +269,17 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFEF2F2),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFFECACA)),
+                                  border: Border.all(
+                                    color: const Color(0xFFFECACA),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                                    const Icon(
+                                      Icons.error_outline_rounded,
+                                      color: AppColors.error,
+                                      size: 18,
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -308,21 +321,35 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                   fontSize: 14,
                                   color: AppColors.textMuted,
                                 ),
-                                prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppColors.textMuted, size: 20),
+                                prefixIcon: const Icon(
+                                  Icons.alternate_email_rounded,
+                                  color: AppColors.textMuted,
+                                  size: 20,
+                                ),
                                 filled: true,
                                 fillColor: const Color(0xFFF8FAFC),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 15,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.8,
+                                  ),
                                 ),
                               ),
                               validator: (val) {
@@ -330,7 +357,8 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                   return 'Please enter your email address';
                                 }
                                 final clean = val.trim();
-                                if (!clean.contains('@') || !clean.contains('.')) {
+                                if (!clean.contains('@') ||
+                                    !clean.contains('.')) {
                                   return 'Please enter a valid email address';
                                 }
                                 return null;
@@ -346,11 +374,15 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                                    colors: [
+                                      Color(0xFF0F172A),
+                                      Color(0xFF1E3A8A),
+                                    ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                      color: const Color(0xFF1E3A8A)
+                                          .withValues(alpha: 0.35),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -362,11 +394,20 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
                                         )
-                                      : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                                      : const Icon(
+                                          Icons.send_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
                                   label: Text(
-                                    _isSending ? 'Sending Code...' : 'Send Verification Code (OTP)',
+                                    _isSending
+                                        ? 'Sending Code...'
+                                        : 'Send Verification Code (OTP)',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14.5,
