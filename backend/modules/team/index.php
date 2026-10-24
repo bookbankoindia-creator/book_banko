@@ -246,10 +246,216 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $db->query("SELECT * FROM admins ORDER BY (role = 'super_admin') DESC, id ASC");
 $teamMembers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Count active and super admin
-$totalMembers = count($teamMembers);
-$activeMembers = count(array_filter($teamMembers, fn($m) => ($m['status'] ?? 'active') === 'active'));
-$superAdminCount = count(array_filter($teamMembers, fn($m) => ($m['role'] ?? '') === 'super_admin'));
+// Group modules by category
+$groupedModules = [];
+foreach ($allModules as $modKey => $modInfo) {
+    $grp = $modInfo['group'] ?? 'General';
+    if (!isset($groupedModules[$grp])) {
+        $groupedModules[$grp] = [];
+    }
+    $groupedModules[$grp][$modKey] = $modInfo;
+}
+
+/**
+ * Render the Modern Screen Privileges Grid UI
+ */
+function renderPermissionsMatrix(string $containerId, array $allModules, array $groupedModules, array $memberPerms = []): string {
+    ob_start();
+    $totalScreens = count($allModules);
+    $activeCount = count($memberPerms);
+    $grpIcons = [
+        'Education Hierarchy' => 'bi-mortarboard',
+        'Standard Study Modules (PDFs)' => 'bi-journal-bookmark',
+        'Home Categories & Store' => 'bi-shop',
+        'App Management' => 'bi-sliders',
+        'Core' => 'bi-grid-1x2',
+    ];
+    ?>
+    <div class="perm-matrix-wrapper" id="<?= $containerId ?>">
+        <!-- 1. Header Toolbar: Presets + Search + Category Filter Navigation -->
+        <div class="bg-white border rounded-3 p-3 mb-3 shadow-xs">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock-fill text-primary"></i>Screen Privileges & Operations
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill py-1 px-2 fw-semibold perm-summary-counter" style="font-size: 11px;">
+                        <span class="perm-active-count"><?= $activeCount ?></span> of <?= $totalScreens ?> screens authorized
+                    </span>
+                </div>
+                <!-- Quick Preset Buttons -->
+                <div class="d-flex flex-wrap gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 btn-preset-all" data-matrix="#<?= $containerId ?>" title="Grant full access to all screens">
+                        <i class="bi bi-check-all me-1"></i>Full Access (All)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info py-1 px-2 btn-preset-view" data-matrix="#<?= $containerId ?>" title="View-only access for all screens">
+                        <i class="bi bi-eye me-1"></i>View Only All
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 btn-preset-study" data-matrix="#<?= $containerId ?>" title="Full access to Study PDFs & Education">
+                        <i class="bi bi-journal-check me-1"></i>Study Content Only
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-preset-clear" data-matrix="#<?= $containerId ?>" title="Clear all screen permissions">
+                        <i class="bi bi-x-circle me-1"></i>Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search + Category Filter Navigation Pills -->
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 perm-search-input" placeholder="Search screen name (e.g. Textbooks, PYQs, Subjects)..." data-matrix="#<?= $containerId ?>">
+                        <button class="btn btn-outline-secondary btn-clear-search" type="button" data-matrix="#<?= $containerId ?>" title="Clear search">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-12 col-md-7">
+                    <div class="d-flex flex-wrap gap-1 justify-content-md-end perm-filter-tabs" data-matrix="#<?= $containerId ?>">
+                        <button type="button" class="btn btn-sm btn-primary py-1 px-2 filter-pill active" data-filter="all">
+                            All Screens (<?= $totalScreens ?>)
+                        </button>
+                        <?php foreach ($groupedModules as $grpName => $grpMods): 
+                            $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $grpName), '-'));
+                            $icon = $grpIcons[$grpName] ?? 'bi-folder';
+                            $count = count($grpMods);
+                        ?>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 filter-pill" data-filter="<?= $slug ?>">
+                                <i class="bi <?= $icon ?> me-1"></i><?= htmlspecialchars($grpName) ?> (<?= $count ?>)
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Screen Cards Grouped by Category -->
+        <div class="perm-groups-container">
+            <?php foreach ($groupedModules as $grpName => $grpMods): 
+                $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $grpName), '-'));
+                $icon = $grpIcons[$grpName] ?? 'bi-folder';
+            ?>
+            <div class="perm-category-section mb-4" data-category="<?= $slug ?>">
+                <!-- Category Section Banner -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center p-2 px-3 bg-light rounded-3 border mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi <?= $icon ?> text-primary fs-5"></i>
+                        <span class="fw-bold text-dark"><?= htmlspecialchars($grpName) ?></span>
+                        <span class="badge bg-secondary-subtle text-secondary border category-active-counter" style="font-size: 11px;">
+                            <span class="cat-count">0</span> / <?= count($grpMods) ?> active
+                        </span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 btn-cat-all" data-category="<?= $slug ?>" data-matrix="#<?= $containerId ?>" style="font-size: 11px;">
+                            <i class="bi bi-check2 me-1"></i>Grant Category
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 btn-cat-view" data-category="<?= $slug ?>" data-matrix="#<?= $containerId ?>" style="font-size: 11px;">
+                            View Only
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 btn-cat-clear" data-category="<?= $slug ?>" data-matrix="#<?= $containerId ?>" style="font-size: 11px;">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards Grid -->
+                <div class="row g-3">
+                    <?php foreach ($grpMods as $modKey => $modInfo): 
+                        $acts = $memberPerms[$modKey] ?? [];
+                        $canView = in_array('view', $acts);
+                        $canAdd = in_array('add', $acts);
+                        $canEdit = in_array('edit', $acts) || in_array('update', $acts);
+                        $supportsAdd = in_array('add', $modInfo['actions']);
+                        $supportsEdit = in_array('edit', $modInfo['actions']);
+
+                        // Status badge text
+                        $statusText = 'No Access';
+                        $statusClass = 'bg-secondary-subtle text-secondary';
+                        if ($canView && (!$supportsAdd || $canAdd) && (!$supportsEdit || $canEdit)) {
+                            $statusText = 'Full Access';
+                            $statusClass = 'bg-success text-white';
+                        } elseif ($canView && ($canAdd || $canEdit)) {
+                            $statusText = 'Custom Access';
+                            $statusClass = 'bg-warning text-dark';
+                        } elseif ($canView) {
+                            $statusText = 'View Only';
+                            $statusClass = 'bg-info text-dark';
+                        }
+                    ?>
+                    <div class="col-12 col-md-6 col-xl-4 screen-card-item" data-search="<?= strtolower(htmlspecialchars($modInfo['name'] . ' ' . $grpName . ' ' . $modKey)) ?>" data-category="<?= $slug ?>">
+                        <div class="card h-100 border rounded-3 p-3 shadow-xs perm-screen-card <?= $canView ? 'border-primary-subtle bg-white shadow-sm' : 'bg-light-subtle' ?>">
+                            <!-- Card Header -->
+                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2 text-truncate">
+                                    <div class="p-2 rounded bg-primary-subtle text-primary flex-shrink-0" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
+                                    </div>
+                                    <div class="text-truncate">
+                                        <div class="fw-bold text-dark small text-truncate" title="<?= htmlspecialchars($modInfo['name']) ?>">
+                                            <?= htmlspecialchars($modInfo['name']) ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 10px;"><?= htmlspecialchars($modInfo['url']) ?></div>
+                                    </div>
+                                </div>
+                                <span class="badge <?= $statusClass ?> perm-card-badge flex-shrink-0" style="font-size: 10px;">
+                                    <?= $statusText ?>
+                                </span>
+                            </div>
+
+                            <!-- Interactive Toggles -->
+                            <div class="d-flex flex-column gap-2 mt-auto pt-1">
+                                <!-- View Toggle -->
+                                <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded border">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                        <input class="form-check-input chk-view" type="checkbox" name="perms[<?= $modKey ?>][]" value="view" id="<?= $containerId ?>_<?= $modKey ?>_view" <?= $canView ? 'checked' : '' ?>>
+                                        <label class="form-check-label small fw-bold text-dark" for="<?= $containerId ?>_<?= $modKey ?>_view">
+                                            <i class="bi bi-eye text-primary me-1"></i>Show in Menu (View)
+                                        </label>
+                                    </div>
+                                    <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none btn-card-quick-toggle" title="Toggle full access on this screen" style="font-size: 11px;">
+                                        <?= ($canView && (!$supportsAdd || $canAdd) && (!$supportsEdit || $canEdit)) ? 'Revoke' : 'All' ?>
+                                    </button>
+                                </div>
+
+                                <!-- Add & Edit Toggles -->
+                                <div class="d-flex align-items-center justify-content-between gap-2 px-1">
+                                    <!-- Add -->
+                                    <?php if ($supportsAdd): ?>
+                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1">
+                                            <input class="form-check-input chk-add" type="checkbox" name="perms[<?= $modKey ?>][]" value="add" id="<?= $containerId ?>_<?= $modKey ?>_add" <?= $canAdd ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-secondary" for="<?= $containerId ?>_<?= $modKey ?>_add" style="font-size: 11px;">
+                                                <i class="bi bi-plus-circle text-info me-1"></i>Add New
+                                            </label>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted small fst-italic" style="font-size: 10px;">(View-only module)</span>
+                                    <?php endif; ?>
+
+                                    <!-- Edit -->
+                                    <?php if ($supportsEdit): ?>
+                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1">
+                                            <input class="form-check-input chk-edit" type="checkbox" name="perms[<?= $modKey ?>][]" value="edit" id="<?= $containerId ?>_<?= $modKey ?>_edit" <?= $canEdit ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-secondary" for="<?= $containerId ?>_<?= $modKey ?>_edit" style="font-size: 11px;">
+                                                <i class="bi bi-pencil text-warning me-1"></i>Update / Edit
+                                            </label>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted small fst-italic" style="font-size: 10px;">&nbsp;</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
 
 include __DIR__ . '/../../includes/header.php';
 ?>
@@ -531,47 +737,49 @@ include __DIR__ . '/../../includes/header.php';
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body p-4">
-                                <div class="mb-3 text-secondary small">
-                                    The following screens and operations are currently enabled for <strong><?= htmlspecialchars($member['email']) ?></strong>:
+                                <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div class="text-secondary small">
+                                        Currently authorized screen access for <strong><?= htmlspecialchars($member['full_name']) ?></strong> (<?= htmlspecialchars($member['email']) ?>):
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold"><?= $permittedCount ?> Active Screens</span>
                                 </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-bordered align-middle mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Screen / Module</th>
-                                                <th>Group</th>
-                                                <th class="text-center" width="90">Display (View)</th>
-                                                <th class="text-center" width="90">Add New</th>
-                                                <th class="text-center" width="90">Update / Edit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($allModules as $modKey => $modInfo): 
-                                                $userActions = $memberPerms[$modKey] ?? [];
-                                                $hasView = in_array('view', $userActions);
-                                                $hasAdd = in_array('add', $userActions);
-                                                $hasEdit = in_array('edit', $userActions) || in_array('update', $userActions);
-                                                if (!$hasView && !$hasAdd && !$hasEdit) continue;
-                                            ?>
-                                            <tr>
-                                                <td>
-                                                    <i class="bi <?= $modInfo['icon'] ?> text-primary me-2"></i>
-                                                    <strong><?= htmlspecialchars($modInfo['name']) ?></strong>
-                                                </td>
-                                                <td><span class="badge bg-light text-secondary border"><?= $modInfo['group'] ?></span></td>
-                                                <td class="text-center">
-                                                    <?= $hasView ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i> Yes</span>' : '<span class="text-muted">&mdash;</span>' ?>
-                                                </td>
-                                                <td class="text-center">
-                                                    <?= $hasAdd ? '<span class="badge bg-info text-dark"><i class="bi bi-check-lg"></i> Yes</span>' : '<span class="text-muted">&mdash;</span>' ?>
-                                                </td>
-                                                <td class="text-center">
-                                                    <?= $hasEdit ? '<span class="badge bg-warning text-dark"><i class="bi bi-check-lg"></i> Yes</span>' : '<span class="text-muted">&mdash;</span>' ?>
-                                                </td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                <div class="row g-3">
+                                    <?php foreach ($allModules as $modKey => $modInfo): 
+                                        $userActions = $memberPerms[$modKey] ?? [];
+                                        $hasView = in_array('view', $userActions);
+                                        $hasAdd = in_array('add', $userActions);
+                                        $hasEdit = in_array('edit', $userActions) || in_array('update', $userActions);
+                                        if (!$hasView && !$hasAdd && !$hasEdit) continue;
+                                    ?>
+                                    <div class="col-12 col-md-6">
+                                        <div class="p-3 bg-light rounded-3 border d-flex flex-column gap-2 h-100">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="p-2 rounded bg-primary-subtle text-primary">
+                                                    <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
+                                                </div>
+                                                <div class="text-truncate">
+                                                    <div class="fw-bold text-dark small text-truncate"><?= htmlspecialchars($modInfo['name']) ?></div>
+                                                    <div class="text-muted" style="font-size: 11px;"><?= $modInfo['group'] ?></div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-1 pt-2 border-top mt-auto">
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 11px;">
+                                                    <i class="bi bi-eye me-1"></i>View / Show
+                                                </span>
+                                                <?php if ($hasAdd): ?>
+                                                    <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 11px;">
+                                                        <i class="bi bi-plus-circle me-1"></i>Add New
+                                                    </span>
+                                                <?php endif; ?>
+                                                <?php if ($hasEdit): ?>
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" style="font-size: 11px;">
+                                                        <i class="bi bi-pencil me-1"></i>Update / Edit
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                             <div class="modal-footer border-top py-2">
@@ -665,79 +873,9 @@ include __DIR__ . '/../../includes/header.php';
                                         </div>
                                     </div>
 
-                                    <!-- Privileges Matrix -->
+                                    <!-- Modern Privileges Matrix -->
                                     <div class="privileges-section" id="editMatrix<?= $member['id'] ?>" style="<?= ($member['role'] === 'super_admin') ? 'display: none;' : '' ?>">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 p-2 bg-light rounded-3 border">
-                                            <div class="fw-bold small text-dark">
-                                                <i class="bi bi-ui-checks me-1 text-primary"></i>Assign Permitted Screens & Operations:
-                                            </div>
-                                            <div class="d-flex gap-2">
-                                                <button type="button" class="btn btn-sm btn-outline-primary py-0 btn-select-all" data-matrix="#editMatrix<?= $member['id'] ?>">Select All (Full)</button>
-                                                <button type="button" class="btn btn-sm btn-outline-info py-0 btn-select-view" data-matrix="#editMatrix<?= $member['id'] ?>">View Only</button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 btn-clear-all" data-matrix="#editMatrix<?= $member['id'] ?>">Clear All</button>
-                                            </div>
-                                        </div>
-
-                                        <div class="table-responsive border rounded-3" style="max-height: 400px; overflow-y: auto;">
-                                            <table class="table table-hover table-sm align-middle mb-0">
-                                                <thead class="table-light sticky-top">
-                                                    <tr>
-                                                        <th>Screen / Module Name</th>
-                                                        <th>Category</th>
-                                                        <th class="text-center" width="110">Show / Display</th>
-                                                        <th class="text-center" width="100">Add New</th>
-                                                        <th class="text-center" width="110">Update / Edit</th>
-                                                        <th class="text-center" width="90">Row Quick</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($allModules as $modKey => $modInfo): 
-                                                        $acts = $memberPerms[$modKey] ?? [];
-                                                        $canView = in_array('view', $acts);
-                                                        $canAdd = in_array('add', $acts);
-                                                        $canEdit = in_array('edit', $acts) || in_array('update', $acts);
-                                                        $supportsAdd = in_array('add', $modInfo['actions']);
-                                                        $supportsEdit = in_array('edit', $modInfo['actions']);
-                                                    ?>
-                                                    <tr class="perm-row">
-                                                        <td>
-                                                            <i class="bi <?= $modInfo['icon'] ?> text-primary me-2"></i>
-                                                            <span class="fw-semibold text-dark"><?= htmlspecialchars($modInfo['name']) ?></span>
-                                                        </td>
-                                                        <td><span class="badge bg-light text-secondary border"><?= $modInfo['group'] ?></span></td>
-                                                        <td class="text-center">
-                                                            <div class="form-check form-check-inline m-0">
-                                                                <input class="form-check-input chk-view" type="checkbox" name="perms[<?= $modKey ?>][]" value="view" <?= $canView ? 'checked' : '' ?> id="edit_<?= $member['id'] ?>_<?= $modKey ?>_view">
-                                                            </div>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <?php if ($supportsAdd): ?>
-                                                                <div class="form-check form-check-inline m-0">
-                                                                    <input class="form-check-input chk-add" type="checkbox" name="perms[<?= $modKey ?>][]" value="add" <?= $canAdd ? 'checked' : '' ?> id="edit_<?= $member['id'] ?>_<?= $modKey ?>_add">
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">&mdash;</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <?php if ($supportsEdit): ?>
-                                                                <div class="form-check form-check-inline m-0">
-                                                                    <input class="form-check-input chk-edit" type="checkbox" name="perms[<?= $modKey ?>][]" value="edit" <?= $canEdit ? 'checked' : '' ?> id="edit_<?= $member['id'] ?>_<?= $modKey ?>_edit">
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">&mdash;</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-1 btn-toggle-row" title="Toggle row full access" style="font-size: 11px;">
-                                                                All
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                        <?= renderPermissionsMatrix('editMatrixContainer_' . $member['id'], $allModules, $groupedModules, $memberPerms) ?>
                                     </div>
                                     <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="<?= ($member['role'] === 'super_admin') ? '' : 'display: none;' ?>">
                                         <i class="bi bi-info-circle-fill me-1"></i>
@@ -896,81 +1034,9 @@ include __DIR__ . '/../../includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Privileges Selection Grid -->
-                    <div id="newMatrixContainer">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 p-2 bg-light rounded-3 border">
-                            <div class="fw-bold small text-dark">
-                                <i class="bi bi-grid-3x3-gap-fill me-1 text-primary"></i>Choose Particular Screens & Operations to Authorize:
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 btn-select-all" data-matrix="#newMatrixContainer">
-                                    <i class="bi bi-check-all me-1"></i>Select All (Full)
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-info py-0 btn-select-view" data-matrix="#newMatrixContainer">
-                                    <i class="bi bi-eye me-1"></i>View Only All
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 btn-clear-all" data-matrix="#newMatrixContainer">
-                                    <i class="bi bi-x me-1"></i>Clear All
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive border rounded-3" style="max-height: 420px; overflow-y: auto;">
-                            <table class="table table-hover table-sm align-middle mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>Screen / Module Name</th>
-                                        <th>Category</th>
-                                        <th class="text-center" width="120">Show / Display</th>
-                                        <th class="text-center" width="110">Add New</th>
-                                        <th class="text-center" width="120">Update / Edit</th>
-                                        <th class="text-center" width="90">Row Quick</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($allModules as $modKey => $modInfo): 
-                                        $supportsAdd = in_array('add', $modInfo['actions']);
-                                        $supportsEdit = in_array('edit', $modInfo['actions']);
-                                    ?>
-                                    <tr class="perm-row">
-                                        <td>
-                                            <i class="bi <?= $modInfo['icon'] ?> text-primary me-2"></i>
-                                            <span class="fw-semibold text-dark"><?= htmlspecialchars($modInfo['name']) ?></span>
-                                        </td>
-                                        <td><span class="badge bg-light text-secondary border"><?= $modInfo['group'] ?></span></td>
-                                        <td class="text-center">
-                                            <div class="form-check form-check-inline m-0">
-                                                <input class="form-check-input chk-view" type="checkbox" name="perms[<?= $modKey ?>][]" value="view" id="new_<?= $modKey ?>_view">
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if ($supportsAdd): ?>
-                                                <div class="form-check form-check-inline m-0">
-                                                    <input class="form-check-input chk-add" type="checkbox" name="perms[<?= $modKey ?>][]" value="add" id="new_<?= $modKey ?>_add">
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="text-muted small">&mdash;</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if ($supportsEdit): ?>
-                                                <div class="form-check form-check-inline m-0">
-                                                    <input class="form-check-input chk-edit" type="checkbox" name="perms[<?= $modKey ?>][]" value="edit" id="new_<?= $modKey ?>_edit">
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="text-muted small">&mdash;</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-1 btn-toggle-row" title="Toggle row full access" style="font-size: 11px;">
-                                                All
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Modern Privileges Selection Grid -->
+                    <div class="privileges-section" id="newMatrixContainer">
+                        <?= renderPermissionsMatrix('newMatrixContainer', $allModules, $groupedModules, []) ?>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="display: none;">
@@ -1007,68 +1073,151 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Auto check 'view' when 'add' or 'edit' is checked
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('chk-add') || e.target.classList.contains('chk-edit')) {
-            if (e.target.checked) {
-                var row = e.target.closest('tr');
-                if (row) {
-                    var viewChk = row.querySelector('.chk-view');
-                    if (viewChk) viewChk.checked = true;
-                }
+    // Update visual appearance and badge of a single screen card
+    function updateCardVisuals(cardEl) {
+        if (!cardEl) return;
+        var viewChk = cardEl.querySelector('.chk-view');
+        var addChk = cardEl.querySelector('.chk-add');
+        var editChk = cardEl.querySelector('.chk-edit');
+        var badge = cardEl.querySelector('.perm-card-badge');
+        var quickBtn = cardEl.querySelector('.btn-card-quick-toggle');
+
+        var canView = viewChk ? viewChk.checked : false;
+        var canAdd = addChk ? addChk.checked : false;
+        var canEdit = editChk ? editChk.checked : false;
+
+        var hasAdd = !!addChk;
+        var hasEdit = !!editChk;
+
+        var isFull = canView && (!hasAdd || canAdd) && (!hasEdit || canEdit);
+
+        if (badge) {
+            if (!canView) {
+                badge.className = 'badge bg-secondary-subtle text-secondary perm-card-badge flex-shrink-0';
+                badge.textContent = 'No Access';
+            } else if (isFull) {
+                badge.className = 'badge bg-success text-white perm-card-badge flex-shrink-0';
+                badge.textContent = 'Full Access';
+            } else if (canAdd || canEdit) {
+                badge.className = 'badge bg-warning text-dark perm-card-badge flex-shrink-0';
+                badge.textContent = 'Custom Access';
+            } else {
+                badge.className = 'badge bg-info text-dark perm-card-badge flex-shrink-0';
+                badge.textContent = 'View Only';
             }
         }
-        // If 'view' unchecked, uncheck 'add' and 'edit'
+
+        if (quickBtn) {
+            quickBtn.textContent = isFull ? 'Revoke' : 'All';
+        }
+
+        if (canView) {
+            cardEl.classList.add('border-primary-subtle', 'bg-white', 'shadow-sm');
+            cardEl.classList.remove('bg-light-subtle');
+        } else {
+            cardEl.classList.remove('border-primary-subtle', 'bg-white', 'shadow-sm');
+            cardEl.classList.add('bg-light-subtle');
+        }
+    }
+
+    // Update Category Counters and Overall Active Count in a matrix
+    function updateMatrixCounters(matrixEl) {
+        if (!matrixEl) return;
+        var totalActive = 0;
+
+        matrixEl.querySelectorAll('.perm-category-section').forEach(function(sec) {
+            var catActive = 0;
+            var cards = sec.querySelectorAll('.perm-screen-card');
+            cards.forEach(function(card) {
+                var viewChk = card.querySelector('.chk-view');
+                if (viewChk && viewChk.checked) {
+                    catActive++;
+                }
+            });
+
+            var countSpan = sec.querySelector('.cat-count');
+            if (countSpan) countSpan.textContent = catActive;
+            totalActive += catActive;
+        });
+
+        var summaryCounter = matrixEl.querySelector('.perm-active-count');
+        if (summaryCounter) {
+            summaryCounter.textContent = totalActive;
+        }
+    }
+
+    // Auto check/uncheck dependencies
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('chk-add') || e.target.classList.contains('chk-edit')) {
+            var card = e.target.closest('.perm-screen-card');
+            if (card) {
+                if (e.target.checked) {
+                    var viewChk = card.querySelector('.chk-view');
+                    if (viewChk) viewChk.checked = true;
+                }
+                updateCardVisuals(card);
+                updateMatrixCounters(card.closest('.perm-matrix-wrapper'));
+            }
+        }
+
         if (e.target.classList.contains('chk-view')) {
-            if (!e.target.checked) {
-                var row = e.target.closest('tr');
-                if (row) {
-                    var addChk = row.querySelector('.chk-add');
-                    var editChk = row.querySelector('.chk-edit');
+            var card = e.target.closest('.perm-screen-card');
+            if (card) {
+                if (!e.target.checked) {
+                    var addChk = card.querySelector('.chk-add');
+                    var editChk = card.querySelector('.chk-edit');
                     if (addChk) addChk.checked = false;
                     if (editChk) editChk.checked = false;
                 }
+                updateCardVisuals(card);
+                updateMatrixCounters(card.closest('.perm-matrix-wrapper'));
             }
         }
     });
 
-    // Row toggle button
-    document.querySelectorAll('.btn-toggle-row').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var row = this.closest('tr');
-            var viewChk = row.querySelector('.chk-view');
-            var addChk = row.querySelector('.chk-add');
-            var editChk = row.querySelector('.chk-edit');
+    // Card Quick All / Revoke Toggle
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-card-quick-toggle');
+        if (!btn) return;
+        e.preventDefault();
+        var card = btn.closest('.perm-screen-card');
+        if (!card) return;
 
-            var allChecked = (!viewChk || viewChk.checked) && 
-                             (!addChk || addChk.checked) && 
-                             (!editChk || editChk.checked);
+        var viewChk = card.querySelector('.chk-view');
+        var addChk = card.querySelector('.chk-add');
+        var editChk = card.querySelector('.chk-edit');
 
-            if (allChecked) {
-                if (viewChk) viewChk.checked = false;
-                if (addChk) addChk.checked = false;
-                if (editChk) editChk.checked = false;
-            } else {
-                if (viewChk) viewChk.checked = true;
-                if (addChk) addChk.checked = true;
-                if (editChk) editChk.checked = true;
-            }
-        });
+        var isFull = viewChk && viewChk.checked && (!addChk || addChk.checked) && (!editChk || editChk.checked);
+
+        if (isFull) {
+            if (viewChk) viewChk.checked = false;
+            if (addChk) addChk.checked = false;
+            if (editChk) editChk.checked = false;
+        } else {
+            if (viewChk) viewChk.checked = true;
+            if (addChk) addChk.checked = true;
+            if (editChk) editChk.checked = true;
+        }
+
+        updateCardVisuals(card);
+        updateMatrixCounters(card.closest('.perm-matrix-wrapper'));
     });
 
-    // Select All (Full access)
-    document.querySelectorAll('.btn-select-all').forEach(function(btn) {
+    // Preset: Full Access (All)
+    document.querySelectorAll('.btn-preset-all').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var matrix = document.querySelector(this.getAttribute('data-matrix'));
             if (!matrix) return;
             matrix.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
                 chk.checked = true;
             });
+            matrix.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
         });
     });
 
-    // View Only All
-    document.querySelectorAll('.btn-select-view').forEach(function(btn) {
+    // Preset: View Only All
+    document.querySelectorAll('.btn-preset-view').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var matrix = document.querySelector(this.getAttribute('data-matrix'));
             if (!matrix) return;
@@ -1078,18 +1227,182 @@ document.addEventListener('DOMContentLoaded', function() {
             matrix.querySelectorAll('.chk-add, .chk-edit').forEach(function(chk) {
                 chk.checked = false;
             });
+            matrix.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
         });
     });
 
-    // Clear All
-    document.querySelectorAll('.btn-clear-all').forEach(function(btn) {
+    // Preset: Study Content Only (Education + Study Modules PDFs)
+    document.querySelectorAll('.btn-preset-study').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var matrix = document.querySelector(this.getAttribute('data-matrix'));
             if (!matrix) return;
             matrix.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
                 chk.checked = false;
             });
+            var studyCategories = ['education-hierarchy', 'standard-study-modules-pdfs'];
+            studyCategories.forEach(function(slug) {
+                var sec = matrix.querySelector('.perm-category-section[data-category="' + slug + '"]');
+                if (sec) {
+                    sec.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
+                        chk.checked = true;
+                    });
+                }
+            });
+            matrix.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
         });
+    });
+
+    // Preset: Clear All
+    document.querySelectorAll('.btn-preset-clear').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            if (!matrix) return;
+            matrix.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
+                chk.checked = false;
+            });
+            matrix.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
+        });
+    });
+
+    // Category Level Actions: Grant Category
+    document.querySelectorAll('.btn-cat-all').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            var slug = this.getAttribute('data-category');
+            if (!matrix || !slug) return;
+            var sec = matrix.querySelector('.perm-category-section[data-category="' + slug + '"]');
+            if (!sec) return;
+            sec.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
+                chk.checked = true;
+            });
+            sec.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
+        });
+    });
+
+    // Category Level Actions: View Only
+    document.querySelectorAll('.btn-cat-view').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            var slug = this.getAttribute('data-category');
+            if (!matrix || !slug) return;
+            var sec = matrix.querySelector('.perm-category-section[data-category="' + slug + '"]');
+            if (!sec) return;
+            sec.querySelectorAll('.chk-view').forEach(function(chk) { chk.checked = true; });
+            sec.querySelectorAll('.chk-add, .chk-edit').forEach(function(chk) { chk.checked = false; });
+            sec.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
+        });
+    });
+
+    // Category Level Actions: Clear
+    document.querySelectorAll('.btn-cat-clear').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            var slug = this.getAttribute('data-category');
+            if (!matrix || !slug) return;
+            var sec = matrix.querySelector('.perm-category-section[data-category="' + slug + '"]');
+            if (!sec) return;
+            sec.querySelectorAll('.chk-view, .chk-add, .chk-edit').forEach(function(chk) {
+                chk.checked = false;
+            });
+            sec.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+            updateMatrixCounters(matrix);
+        });
+    });
+
+    // Category Filter Pills Navigation
+    document.querySelectorAll('.filter-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            var filterGroup = this.closest('.perm-filter-tabs');
+            var matrix = document.querySelector(filterGroup ? filterGroup.getAttribute('data-matrix') : '');
+            if (!matrix) return;
+
+            filterGroup.querySelectorAll('.filter-pill').forEach(function(p) {
+                p.classList.remove('active', 'btn-primary');
+                p.classList.add('btn-outline-secondary');
+            });
+            this.classList.remove('btn-outline-secondary');
+            this.classList.add('active', 'btn-primary');
+
+            var filter = this.getAttribute('data-filter');
+            var searchInput = matrix.querySelector('.perm-search-input');
+            if (searchInput) searchInput.value = '';
+
+            matrix.querySelectorAll('.screen-card-item').forEach(function(item) {
+                item.style.display = '';
+            });
+
+            if (filter === 'all') {
+                matrix.querySelectorAll('.perm-category-section').forEach(function(sec) {
+                    sec.style.display = '';
+                });
+            } else {
+                matrix.querySelectorAll('.perm-category-section').forEach(function(sec) {
+                    if (sec.getAttribute('data-category') === filter) {
+                        sec.style.display = '';
+                    } else {
+                        sec.style.display = 'none';
+                    }
+                });
+            }
+        });
+    });
+
+    // Real-time Search Filter
+    document.querySelectorAll('.perm-search-input').forEach(function(input) {
+        input.addEventListener('input', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            if (!matrix) return;
+            var query = this.value.trim().toLowerCase();
+
+            if (!query) {
+                // If search is cleared, restore filter pill state
+                var activePill = matrix.querySelector('.filter-pill.active');
+                if (activePill) activePill.click();
+                return;
+            }
+
+            // In search mode, search across all cards
+            matrix.querySelectorAll('.perm-category-section').forEach(function(sec) {
+                sec.style.display = '';
+                var visibleInSec = 0;
+                sec.querySelectorAll('.screen-card-item').forEach(function(item) {
+                    var s = item.getAttribute('data-search') || '';
+                    if (s.indexOf(query) !== -1) {
+                        item.style.display = '';
+                        visibleInSec++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                if (visibleInSec === 0) {
+                    sec.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Clear Search Button
+    document.querySelectorAll('.btn-clear-search').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var matrix = document.querySelector(this.getAttribute('data-matrix'));
+            if (!matrix) return;
+            var input = matrix.querySelector('.perm-search-input');
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    // Initialize all matrix visuals on load
+    document.querySelectorAll('.perm-matrix-wrapper').forEach(function(matrix) {
+        matrix.querySelectorAll('.perm-screen-card').forEach(updateCardVisuals);
+        updateMatrixCounters(matrix);
     });
 
     // Toggle Password Visibility
