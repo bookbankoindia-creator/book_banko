@@ -77,10 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
                     $insertStmt = $db->prepare("
-                        INSERT INTO admins (username, email, password_hash, full_name, role, status, permissions, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())
+                        INSERT INTO admins (username, email, password_hash, full_name, role, status, permissions, plain_password, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, 'active', ?, ?, NOW(), NOW())
                     ");
-                    $insertStmt->execute([$username, $email, $passwordHash, $fullName, $role, $permsJson]);
+                    $insertStmt->execute([$username, $email, $passwordHash, $fullName, $role, $permsJson, $password]);
 
                     flash('success', "Team member '{$fullName}' ({$email}) added successfully with customized privileges!");
                 }
@@ -144,10 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
                         $updateStmt = $db->prepare("
                             UPDATE admins 
-                            SET full_name = ?, email = ?, username = ?, password_hash = ?, role = ?, status = ?, permissions = ?, updated_at = NOW()
+                            SET full_name = ?, email = ?, username = ?, password_hash = ?, role = ?, status = ?, permissions = ?, plain_password = ?, updated_at = NOW()
                             WHERE id = ?
                         ");
-                        $updateStmt->execute([$fullName, $email, $username, $newHash, $role, $status, $permsJson, $memberId]);
+                        $updateStmt->execute([$fullName, $email, $username, $newHash, $role, $status, $permsJson, $newPassword, $memberId]);
                     } else {
                         $updateStmt = $db->prepare("
                             UPDATE admins 
@@ -188,8 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-                $stmt = $db->prepare("UPDATE admins SET password_hash = ?, updated_at = NOW() WHERE id = ?");
-                $stmt->execute([$hash, $memberId]);
+                $stmt = $db->prepare("UPDATE admins SET password_hash = ?, plain_password = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$hash, $newPassword, $memberId]);
                 flash('success', 'Password reset successfully for this team member.');
             } catch (PDOException $e) {
                 flash('error', 'Database error: ' . $e->getMessage());
@@ -324,7 +324,7 @@ include __DIR__ . '/../../includes/header.php';
                 <tr>
                     <th width="50">#</th>
                     <th>Member Profile</th>
-                    <th>Login Username & Email</th>
+                    <th style="min-width: 250px;">Account Credentials (User, Email & Pass)</th>
                     <th>Role</th>
                     <th>Screen Access & Privileges</th>
                     <th>Status</th>
@@ -366,14 +366,78 @@ include __DIR__ . '/../../includes/header.php';
                         </div>
                     </td>
                     <td>
-                        <div class="fw-semibold text-dark">
-                            <i class="bi bi-person me-1 text-muted"></i><?= htmlspecialchars($member['username']) ?>
-                        </div>
-                        <div class="text-secondary small d-flex align-items-center gap-1">
-                            <i class="bi bi-envelope text-muted"></i>
-                            <a href="mailto:<?= htmlspecialchars($member['email']) ?>" class="text-decoration-none text-secondary">
-                                <?= htmlspecialchars($member['email']) ?>
-                            </a>
+                        <div class="d-flex flex-column gap-1" style="min-width: 240px; max-width: 320px;">
+                            <!-- Username -->
+                            <div class="d-flex align-items-center justify-content-between bg-light px-2 py-1 rounded border">
+                                <div class="d-flex align-items-center gap-1 text-truncate">
+                                    <i class="bi bi-person-fill text-primary" style="font-size: 13px;"></i>
+                                    <span class="text-secondary small" style="font-size: 11px;">User:</span>
+                                    <strong class="text-dark small font-monospace user-select-all"><?= htmlspecialchars($member['username']) ?></strong>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['username']) ?>" data-label="Username" title="Copy Username">
+                                    <i class="bi bi-clipboard" style="font-size: 12px;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="d-flex align-items-center justify-content-between bg-light px-2 py-1 rounded border">
+                                <div class="d-flex align-items-center gap-1 text-truncate">
+                                    <i class="bi bi-envelope-fill text-info" style="font-size: 13px;"></i>
+                                    <span class="text-secondary small" style="font-size: 11px;">Email:</span>
+                                    <a href="mailto:<?= htmlspecialchars($member['email']) ?>" class="text-dark small text-truncate text-decoration-none" style="max-width: 140px;" title="<?= htmlspecialchars($member['email']) ?>">
+                                        <?= htmlspecialchars($member['email']) ?>
+                                    </a>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['email']) ?>" data-label="Email" title="Copy Email">
+                                    <i class="bi bi-clipboard" style="font-size: 12px;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="d-flex align-items-center justify-content-between bg-light px-2 py-1 rounded border">
+                                <div class="d-flex align-items-center gap-1">
+                                    <i class="bi bi-key-fill text-warning" style="font-size: 13px;"></i>
+                                    <span class="text-secondary small" style="font-size: 11px;">Pass:</span>
+                                    <?php if (!empty($member['plain_password'])): ?>
+                                        <span class="font-monospace fw-bold text-dark small cred-password-text" data-plain="<?= htmlspecialchars($member['plain_password']) ?>">••••••••</span>
+                                    <?php else: ?>
+                                        <span class="text-muted fst-italic small" style="font-size: 11px;">Encrypted</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <?php if (!empty($member['plain_password'])): ?>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-secondary toggle-cred-pass-btn" title="Show / Hide Password">
+                                            <i class="bi bi-eye" style="font-size: 13px;"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['plain_password']) ?>" data-label="Password" title="Copy Password">
+                                            <i class="bi bi-clipboard" style="font-size: 12px;"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-primary small fw-semibold" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#passwordModal<?= $member['id'] ?>" title="Reset to view password">
+                                            Reset
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <!-- 1-Click Share All Credentials -->
+                            <div class="mt-1 d-flex justify-content-between align-items-center">
+                                <span class="badge bg-light text-muted border" style="font-size: 10px;">
+                                    <i class="bi bi-shield-lock me-1"></i>Auth Card
+                                </span>
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 share-all-creds-btn d-inline-flex align-items-center gap-1"
+                                        style="font-size: 11px; font-weight: 500;"
+                                        data-name="<?= htmlspecialchars($member['full_name']) ?>"
+                                        data-username="<?= htmlspecialchars($member['username']) ?>"
+                                        data-email="<?= htmlspecialchars($member['email']) ?>"
+                                        data-role="<?= $isSuper ? 'Super Administrator' : 'Team Member' ?>"
+                                        data-password="<?= htmlspecialchars($member['plain_password'] ?? '(Reset needed to view password)') ?>"
+                                        data-login-url="<?= url('auth/login.php') ?>"
+                                        title="Copy formatted login message to clipboard">
+                                    <i class="bi bi-share-fill" style="font-size: 10px;"></i>
+                                    <span>Share Creds</span>
+                                </button>
+                            </div>
                         </div>
                     </td>
                     <td>
@@ -571,6 +635,14 @@ include __DIR__ . '/../../includes/header.php';
                                                             <i class="bi bi-shuffle"></i>
                                                         </button>
                                                     </div>
+                                                    <?php if (!empty($member['plain_password'])): ?>
+                                                        <div class="form-text small d-flex align-items-center justify-content-between mt-1">
+                                                            <span>Current: <strong class="font-monospace text-primary"><?= htmlspecialchars($member['plain_password']) ?></strong></span>
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['plain_password']) ?>" data-label="Password" title="Copy Current Password">
+                                                                <i class="bi bi-clipboard" style="font-size: 11px;"></i>
+                                                            </button>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="col-12 col-md-6">
                                                     <label class="form-label fw-bold text-dark small mb-1">Role & Access Type <span class="text-danger">*</span></label>
@@ -700,6 +772,20 @@ include __DIR__ . '/../../includes/header.php';
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body p-4">
+                                    <?php if (!empty($member['plain_password'])): ?>
+                                        <div class="mb-3 p-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="text-secondary small fw-semibold" style="font-size: 11px;">
+                                                    <i class="bi bi-shield-check text-success me-1"></i>CURRENT ACTIVE PASSWORD
+                                                </div>
+                                                <div class="fw-bold font-monospace text-dark fs-6 mt-1 user-select-all"><?= htmlspecialchars($member['plain_password']) ?></div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['plain_password']) ?>" data-label="Password" title="Copy Current Password">
+                                                <i class="bi bi-clipboard me-1"></i>Copy
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold small">New Password <span class="text-danger">*</span></label>
                                         <div class="input-group">
@@ -1059,6 +1145,87 @@ document.addEventListener('DOMContentLoaded', function() {
             if (modalBody) modalBody.scrollTop = 0;
             var firstInput = this.querySelector('input[type="text"]:not([disabled])');
             if (firstInput) firstInput.focus();
+        });
+    });
+
+    // Toggle Table Credential Password Visibility
+    document.querySelectorAll('.toggle-cred-pass-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var row = this.closest('td');
+            var textEl = row ? row.querySelector('.cred-password-text') : null;
+            if (!textEl) return;
+            var plain = textEl.getAttribute('data-plain');
+            var icon = this.querySelector('i');
+            if (textEl.textContent.trim() === '••••••••') {
+                textEl.textContent = plain;
+                textEl.classList.add('text-primary');
+                if (icon) icon.className = 'bi bi-eye-slash';
+            } else {
+                textEl.textContent = '••••••••';
+                textEl.classList.remove('text-primary');
+                if (icon) icon.className = 'bi bi-eye';
+            }
+        });
+    });
+
+    // Copy Individual Credential (Username / Email / Password)
+    document.querySelectorAll('.copy-credential-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var text = this.getAttribute('data-copy');
+            var label = this.getAttribute('data-label') || 'Credential';
+            if (!text) return;
+            var self = this;
+            navigator.clipboard.writeText(text).then(function() {
+                var icon = self.querySelector('i');
+                var originalClass = icon ? icon.className : '';
+                if (icon) icon.className = 'bi bi-check-lg text-success';
+                var originalTitle = self.getAttribute('title');
+                self.setAttribute('title', 'Copied ' + label + '!');
+                setTimeout(function() {
+                    if (icon) icon.className = originalClass;
+                    if (originalTitle) self.setAttribute('title', originalTitle);
+                }, 1500);
+            }).catch(function(err) {
+                prompt('Copy ' + label + ':', text);
+            });
+        });
+    });
+
+    // Share / Copy All Credentials Card
+    document.querySelectorAll('.share-all-creds-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var name = this.getAttribute('data-name') || '';
+            var username = this.getAttribute('data-username') || '';
+            var email = this.getAttribute('data-email') || '';
+            var password = this.getAttribute('data-password') || '';
+            var role = this.getAttribute('data-role') || '';
+            var loginPath = this.getAttribute('data-login-url') || '/auth/login.php';
+            var loginUrl = window.location.origin + (loginPath.startsWith('/') ? loginPath : '/' + loginPath);
+
+            var cardText = "🔐 Book Banko Admin Access Credentials\n" +
+                           "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                           "👤 Name: " + name + "\n" +
+                           "🏷️ Username: " + username + "\n" +
+                           "✉️ Email: " + email + "\n" +
+                           "🔑 Password: " + password + "\n" +
+                           "🛡️ Role: " + role + "\n" +
+                           "🌐 Login Portal: " + loginUrl + "\n" +
+                           "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                           "⚠️ Note: Please keep your login credentials secure.";
+
+            var self = this;
+            navigator.clipboard.writeText(cardText).then(function() {
+                var originalHtml = self.innerHTML;
+                self.innerHTML = '<i class="bi bi-check2-circle text-success" style="font-size: 11px;"></i> <span class="text-success fw-bold">Copied!</span>';
+                setTimeout(function() {
+                    self.innerHTML = originalHtml;
+                }, 2000);
+            }).catch(function() {
+                prompt('Copy Login Details:', cardText);
+            });
         });
     });
 });
