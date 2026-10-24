@@ -822,3 +822,67 @@ body {
     font-size: 13px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Modern Portal Status, Micro-animations & Aesthetics
+   -------------------------------------------------------------------------- */
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10B981;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+}
+
+.status-pulse-dot::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.4);
+  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.dropdown-menu.animate {
+  animation-duration: 0.2s;
+  animation-fill-mode: both;
+}
+
+@keyframes slideIn {
+  0% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.slideIn {
+  animation-name: slideIn;
+}
+
+/* Smooth Table Row Elevation */
+.bb-table tbody tr {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.bb-table tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Quick shortcut card micro-interaction */
+.hover-shadow {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-shadow:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 97, 164, 0.15);
+  border-color: #90CAF9 !important;
+}
+
