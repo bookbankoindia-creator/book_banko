@@ -372,8 +372,23 @@ function renderPermissionsMatrix(string $containerId, array $allModules, array $
                     </div>
                 </div>
 
-                <!-- Cards Grid -->
-                <div class="row g-3">
+                <!-- List Header for Desktop -->
+                <div class="d-none d-lg-flex align-items-center justify-content-between px-3 py-2 bg-white border rounded-2 mb-2 text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                    <div style="flex: 1 1 320px; min-width: 260px;">
+                        <i class="bi bi-window me-1"></i>Screen / Module & Route
+                    </div>
+                    <div class="d-flex align-items-center gap-2" style="justify-content: flex-start;">
+                        <span style="min-width: 170px;"><i class="bi bi-eye text-primary me-1"></i>Menu Access (View)</span>
+                        <span style="min-width: 140px;"><i class="bi bi-plus-circle text-info me-1"></i>Add New Record</span>
+                        <span style="min-width: 145px;"><i class="bi bi-pencil text-warning me-1"></i>Edit / Update</span>
+                    </div>
+                    <div class="text-end" style="min-width: 160px;">
+                        <i class="bi bi-shield-check text-success me-1"></i>Status & Quick Action
+                    </div>
+                </div>
+
+                <!-- Screen List Items (Full-width List instead of box/card grid) -->
+                <div class="perm-screen-list d-flex flex-column gap-2">
                     <?php foreach ($grpMods as $modKey => $modInfo): 
                         $acts = $memberPerms[$modKey] ?? [];
                         $canView = in_array('view', $acts);
@@ -396,68 +411,84 @@ function renderPermissionsMatrix(string $containerId, array $allModules, array $
                             $statusClass = 'bg-info text-dark';
                         }
                     ?>
-                    <div class="col-12 col-md-6 col-xl-4 screen-card-item" data-search="<?= strtolower(htmlspecialchars($modInfo['name'] . ' ' . $grpName . ' ' . $modKey)) ?>" data-category="<?= $slug ?>">
-                        <div class="card h-100 border rounded-3 p-3 shadow-xs perm-screen-card <?= $canView ? 'border-primary-subtle bg-white shadow-sm' : 'bg-light-subtle' ?>">
-                            <!-- Card Header -->
-                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                <div class="d-flex align-items-center gap-2 text-truncate">
-                                    <div class="p-2 rounded bg-primary-subtle text-primary flex-shrink-0" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
-                                    </div>
-                                    <div class="text-truncate">
-                                        <div class="fw-bold text-dark small text-truncate" title="<?= htmlspecialchars($modInfo['name']) ?>">
-                                            <?= htmlspecialchars($modInfo['name']) ?>
-                                        </div>
-                                        <div class="text-muted" style="font-size: 10px;"><?= htmlspecialchars($modInfo['url']) ?></div>
-                                    </div>
+                    <div class="screen-card-item perm-screen-card perm-screen-row border rounded-3 p-2 px-3 shadow-xs d-flex flex-wrap align-items-center justify-content-between gap-3 <?= $canView ? 'border-primary-subtle bg-white shadow-sm' : 'bg-light-subtle' ?>" data-search="<?= strtolower(htmlspecialchars($modInfo['name'] . ' ' . $grpName . ' ' . $modKey)) ?>" data-category="<?= $slug ?>">
+                        <!-- 1. Screen Module Info -->
+                        <div class="d-flex align-items-center gap-3 screen-info-col" style="flex: 1 1 320px; min-width: 260px;">
+                            <div class="p-2 rounded-3 bg-primary-subtle text-primary flex-shrink-0 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px;">
+                                <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="fw-bold text-dark text-truncate screen-title" title="<?= htmlspecialchars($modInfo['name']) ?>" style="font-size: 13.5px;">
+                                    <?= htmlspecialchars($modInfo['name']) ?>
                                 </div>
-                                <span class="badge <?= $statusClass ?> perm-card-badge flex-shrink-0" style="font-size: 10px;">
-                                    <?= $statusText ?>
+                                <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+                                    <span class="badge bg-light text-muted border font-monospace py-0 px-1" style="font-size: 10.5px;">
+                                        <?= htmlspecialchars($modInfo['url']) ?>
+                                    </span>
+                                    <span class="badge bg-secondary-subtle text-secondary py-0 px-1" style="font-size: 10px;">
+                                        <?= htmlspecialchars($grpName) ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Operations / Toggles in clean capsules -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap screen-ops-col">
+                            <!-- View Toggle Pill -->
+                            <div class="perm-switch-pill perm-switch-pill-view d-flex align-items-center px-3 py-1 rounded-pill border <?= $canView ? 'bg-primary-subtle border-primary-subtle' : 'bg-light' ?>" style="min-width: 170px;">
+                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input chk-view" type="checkbox" name="perms[<?= $modKey ?>][]" value="view" id="<?= $containerId ?>_<?= $modKey ?>_view" <?= $canView ? 'checked' : '' ?>>
+                                    <label class="form-check-label small fw-bold text-dark user-select-none" for="<?= $containerId ?>_<?= $modKey ?>_view" style="font-size: 12px; cursor: pointer;">
+                                        <i class="bi bi-eye text-primary me-1"></i>Show in Menu
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Add Toggle Pill -->
+                            <?php if ($supportsAdd): ?>
+                            <div class="perm-switch-pill d-flex align-items-center px-3 py-1 rounded-pill border bg-light" style="min-width: 140px;">
+                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input chk-add" type="checkbox" name="perms[<?= $modKey ?>][]" value="add" id="<?= $containerId ?>_<?= $modKey ?>_add" <?= $canAdd ? 'checked' : '' ?>>
+                                    <label class="form-check-label small text-secondary user-select-none" for="<?= $containerId ?>_<?= $modKey ?>_add" style="font-size: 12px; cursor: pointer;">
+                                        <i class="bi bi-plus-circle text-info me-1"></i>Add New
+                                    </label>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <div class="perm-switch-pill d-flex align-items-center px-3 py-1 rounded-pill border border-dashed text-muted bg-transparent" style="min-width: 140px;">
+                                <span class="small fst-italic text-secondary" style="font-size: 11px;">
+                                    <i class="bi bi-dash-circle me-1 text-muted"></i>No Add Option
                                 </span>
                             </div>
+                            <?php endif; ?>
 
-                            <!-- Interactive Toggles -->
-                            <div class="d-flex flex-column gap-2 mt-auto pt-1">
-                                <!-- View Toggle -->
-                                <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded border">
-                                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
-                                        <input class="form-check-input chk-view" type="checkbox" name="perms[<?= $modKey ?>][]" value="view" id="<?= $containerId ?>_<?= $modKey ?>_view" <?= $canView ? 'checked' : '' ?>>
-                                        <label class="form-check-label small fw-bold text-dark" for="<?= $containerId ?>_<?= $modKey ?>_view">
-                                            <i class="bi bi-eye text-primary me-1"></i>Show in Menu (View)
-                                        </label>
-                                    </div>
-                                    <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none btn-card-quick-toggle" title="Toggle full access on this screen" style="font-size: 11px;">
-                                        <?= ($canView && (!$supportsAdd || $canAdd) && (!$supportsEdit || $canEdit)) ? 'Revoke' : 'All' ?>
-                                    </button>
-                                </div>
-
-                                <!-- Add & Edit Toggles -->
-                                <div class="d-flex align-items-center justify-content-between gap-2 px-1">
-                                    <!-- Add -->
-                                    <?php if ($supportsAdd): ?>
-                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1">
-                                            <input class="form-check-input chk-add" type="checkbox" name="perms[<?= $modKey ?>][]" value="add" id="<?= $containerId ?>_<?= $modKey ?>_add" <?= $canAdd ? 'checked' : '' ?>>
-                                            <label class="form-check-label small text-secondary" for="<?= $containerId ?>_<?= $modKey ?>_add" style="font-size: 11px;">
-                                                <i class="bi bi-plus-circle text-info me-1"></i>Add New
-                                            </label>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted small fst-italic" style="font-size: 10px;">(View-only module)</span>
-                                    <?php endif; ?>
-
-                                    <!-- Edit -->
-                                    <?php if ($supportsEdit): ?>
-                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1">
-                                            <input class="form-check-input chk-edit" type="checkbox" name="perms[<?= $modKey ?>][]" value="edit" id="<?= $containerId ?>_<?= $modKey ?>_edit" <?= $canEdit ? 'checked' : '' ?>>
-                                            <label class="form-check-label small text-secondary" for="<?= $containerId ?>_<?= $modKey ?>_edit" style="font-size: 11px;">
-                                                <i class="bi bi-pencil text-warning me-1"></i>Update / Edit
-                                            </label>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted small fst-italic" style="font-size: 10px;">&nbsp;</span>
-                                    <?php endif; ?>
+                            <!-- Edit Toggle Pill -->
+                            <?php if ($supportsEdit): ?>
+                            <div class="perm-switch-pill d-flex align-items-center px-3 py-1 rounded-pill border bg-light" style="min-width: 145px;">
+                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input chk-edit" type="checkbox" name="perms[<?= $modKey ?>][]" value="edit" id="<?= $containerId ?>_<?= $modKey ?>_edit" <?= $canEdit ? 'checked' : '' ?>>
+                                    <label class="form-check-label small text-secondary user-select-none" for="<?= $containerId ?>_<?= $modKey ?>_edit" style="font-size: 12px; cursor: pointer;">
+                                        <i class="bi bi-pencil text-warning me-1"></i>Update / Edit
+                                    </label>
                                 </div>
                             </div>
+                            <?php else: ?>
+                            <div class="perm-switch-pill d-flex align-items-center px-3 py-1 rounded-pill border border-dashed text-muted bg-transparent" style="min-width: 145px;">
+                                <span class="small fst-italic text-secondary" style="font-size: 11px;">
+                                    <i class="bi bi-dash-circle me-1 text-muted"></i>No Edit Option
+                                </span>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- 3. Status Badge and All/Revoke Quick Button -->
+                        <div class="d-flex align-items-center gap-2 screen-status-col flex-shrink-0" style="min-width: 160px; justify-content: flex-end;">
+                            <span class="badge <?= $statusClass ?> perm-card-badge px-2 py-1" style="font-size: 11px;">
+                                <?= $statusText ?>
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-card-quick-toggle" title="Toggle full access on this screen" style="font-size: 11px;">
+                                <?= ($canView && (!$supportsAdd || $canAdd) && (!$supportsEdit || $canEdit)) ? 'Revoke' : 'All' ?>
+                            </button>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -760,7 +791,7 @@ include __DIR__ . '/../../includes/header.php';
                 <!-- View Privileges Modal for this Member -->
                 <?php if (!$isSuper && $permittedCount > 0): ?>
                 <div class="modal fade" id="viewPermsModal<?= $member['id'] ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+                    <div class="modal-dialog modal-dialog-scrollable modal-xl">
                         <div class="modal-content rounded-4 border-0 shadow">
                             <div class="modal-header border-bottom py-3">
                                 <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
@@ -769,14 +800,14 @@ include __DIR__ . '/../../includes/header.php';
                                 </h6>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="modal-body p-4">
+                            <div class="modal-body p-3 p-md-4">
                                 <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <div class="text-secondary small">
                                         Currently authorized screen access for <strong><?= htmlspecialchars($member['full_name']) ?></strong> (<?= htmlspecialchars($member['email']) ?>):
                                     </div>
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold"><?= $permittedCount ?> Active Screens</span>
                                 </div>
-                                <div class="row g-3">
+                                <div class="perm-screen-list d-flex flex-column gap-2">
                                     <?php foreach ($allModules as $modKey => $modInfo): 
                                         $userActions = $memberPerms[$modKey] ?? [];
                                         $hasView = in_array('view', $userActions);
@@ -784,32 +815,33 @@ include __DIR__ . '/../../includes/header.php';
                                         $hasEdit = in_array('edit', $userActions) || in_array('update', $userActions);
                                         if (!$hasView && !$hasAdd && !$hasEdit) continue;
                                     ?>
-                                    <div class="col-12 col-md-6">
-                                        <div class="p-3 bg-light rounded-3 border d-flex flex-column gap-2 h-100">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="p-2 rounded bg-primary-subtle text-primary">
-                                                    <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
-                                                </div>
-                                                <div class="text-truncate">
-                                                    <div class="fw-bold text-dark small text-truncate"><?= htmlspecialchars($modInfo['name']) ?></div>
-                                                    <div class="text-muted" style="font-size: 11px;"><?= $modInfo['group'] ?></div>
+                                    <div class="border rounded-3 p-2 px-3 bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-xs">
+                                        <div class="d-flex align-items-center gap-3" style="flex: 1 1 300px; min-width: 260px;">
+                                            <div class="p-2 rounded-3 bg-primary-subtle text-primary flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                                <i class="bi <?= $modInfo['icon'] ?> fs-5"></i>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="fw-bold text-dark text-truncate" style="font-size: 13.5px;"><?= htmlspecialchars($modInfo['name']) ?></div>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+                                                    <span class="badge bg-light text-muted border font-monospace py-0 px-1" style="font-size: 10.5px;"><?= htmlspecialchars($modInfo['url']) ?></span>
+                                                    <span class="badge bg-secondary-subtle text-secondary py-0 px-1" style="font-size: 10px;"><?= $modInfo['group'] ?></span>
                                                 </div>
                                             </div>
-                                            <div class="d-flex flex-wrap gap-1 pt-2 border-top mt-auto">
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 11px;">
-                                                    <i class="bi bi-eye me-1"></i>View / Show
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 11px;">
+                                                <i class="bi bi-eye me-1"></i>Show in Menu
+                                            </span>
+                                            <?php if ($hasAdd): ?>
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 11px;">
+                                                    <i class="bi bi-plus-circle me-1"></i>Add New
                                                 </span>
-                                                <?php if ($hasAdd): ?>
-                                                    <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 11px;">
-                                                        <i class="bi bi-plus-circle me-1"></i>Add New
-                                                    </span>
-                                                <?php endif; ?>
-                                                <?php if ($hasEdit): ?>
-                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" style="font-size: 11px;">
-                                                        <i class="bi bi-pencil me-1"></i>Update / Edit
-                                                    </span>
-                                                <?php endif; ?>
-                                            </div>
+                                            <?php endif; ?>
+                                            <?php if ($hasEdit): ?>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" style="font-size: 11px;">
+                                                    <i class="bi bi-pencil me-1"></i>Update / Edit
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                     <?php endforeach; ?>
@@ -828,13 +860,13 @@ include __DIR__ . '/../../includes/header.php';
 
                 <!-- Edit Member Modal -->
                 <div class="modal fade" id="editMemberModal<?= $member['id'] ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-scrollable modal-xl modal-dialog-centered">
-                        <form method="POST" action="" class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+                        <form method="POST" action="" class="modal-content rounded-0 border-0 shadow">
                             <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
                             <input type="hidden" name="action" value="update_member">
                             <input type="hidden" name="member_id" value="<?= $member['id'] ?>">
 
-                            <div class="modal-header border-bottom py-3 bg-white sticky-top z-3">
+                            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white sticky-top z-3">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="p-2 rounded bg-primary-subtle text-primary">
                                         <i class="bi bi-person-gear fs-5"></i>
@@ -854,7 +886,7 @@ include __DIR__ . '/../../includes/header.php';
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                             </div>
-                            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important; max-height: calc(88vh - 120px) !important;">
+                            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important;">
                                 <!-- 1. Account Details, Username & Password Card -->
                                 <div class="card border border-primary-subtle bg-light-subtle rounded-3 mb-3 shadow-xs">
                                     <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
@@ -1002,12 +1034,12 @@ include __DIR__ . '/../../includes/header.php';
 
 <!-- ADD NEW TEAM MEMBER MODAL -->
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-xl modal-dialog-centered">
-        <form method="POST" action="" id="addMemberForm" class="modal-content rounded-4 border-0 shadow">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <form method="POST" action="" id="addMemberForm" class="modal-content rounded-0 border-0 shadow">
             <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
             <input type="hidden" name="action" value="add_member">
 
-            <div class="modal-header border-bottom py-3 bg-white sticky-top z-3">
+            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white sticky-top z-3">
                 <div class="d-flex align-items-center gap-2">
                     <div class="p-2 rounded bg-primary-subtle text-primary">
                         <i class="bi bi-person-plus-fill fs-5"></i>
@@ -1027,7 +1059,7 @@ include __DIR__ . '/../../includes/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
-            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important; max-height: calc(88vh - 120px) !important;">
+            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important;">
                 <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 small rounded-3 mb-3">
                     <i class="bi bi-shield-check text-primary fs-5"></i>
                     <div>
@@ -1164,6 +1196,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (quickBtn) {
             quickBtn.textContent = isFull ? 'Revoke' : 'All';
+            if (isFull) {
+                quickBtn.classList.remove('btn-outline-secondary');
+                quickBtn.classList.add('btn-outline-danger');
+            } else {
+                quickBtn.classList.remove('btn-outline-danger');
+                quickBtn.classList.add('btn-outline-secondary');
+            }
+        }
+
+        var viewPill = cardEl.querySelector('.perm-switch-pill-view');
+        if (viewPill) {
+            if (canView) {
+                viewPill.classList.add('bg-primary-subtle', 'border-primary-subtle');
+                viewPill.classList.remove('bg-light');
+            } else {
+                viewPill.classList.remove('bg-primary-subtle', 'border-primary-subtle');
+                viewPill.classList.add('bg-light');
+            }
         }
 
         if (canView) {
