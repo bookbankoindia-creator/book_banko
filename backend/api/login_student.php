@@ -68,6 +68,15 @@ try {
         exit;
     }
 
+    if (!empty($user['is_deleted']) && (int)$user['is_deleted'] === 1) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'This account was deleted in the app. Please register a new account to continue.'
+        ]);
+        exit;
+    }
+
     // Verify password if user has password set
     if (!empty($user['password'])) {
         $storedPass = $user['password'];

@@ -57,6 +57,8 @@ try {
         ");
         try {
             $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password VARCHAR(255) NULL;");
+            $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS is_deleted SMALLINT DEFAULT 0;");
+            $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;");
         } catch (Exception $e) {}
     } else {
         $db->exec("
@@ -178,6 +180,8 @@ try {
                 board = COALESCE(?, board),
                 medium = COALESCE(?, medium),
                 standard = COALESCE(?, standard),
+                is_deleted = 0,
+                deleted_at = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ");

@@ -46,25 +46,45 @@ try {
         exit;
     }
 
-    $deletedRows = 0;
-    if ($userId > 0 && !empty($email)) {
-        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
-        $stmt->execute([$userId, $email]);
-        $deletedRows = $stmt->rowCount();
-    } elseif ($userId > 0) {
-        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $deletedRows = $stmt->rowCount();
+    // Ensure is_deleted and deleted_at columns exist
+    $driver = strtolower(DB_DRIVER);
+    if ($driver === 'pgsql') {
+        try {
+            $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS is_deleted SMALLINT DEFAULT 0;");
+            $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;");
+        } catch (Exception $e) {}
     } else {
-        $stmt = $db->prepare("DELETE FROM app_users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
+        try {
+            $cols = $db->query("SHOW COLUMNS FROM `app_users` LIKE 'is_deleted'")->fetchAll();
+            if (empty($cols)) {
+                $db->exec("ALTER TABLE `app_users` ADD COLUMN `is_deleted` TINYINT DEFAULT 0");
+            }
+            $cols2 = $db->query("SHOW COLUMNS FROM `app_users` LIKE 'deleted_at'")->fetchAll();
+            if (empty($cols2)) {
+                $db->exec("ALTER TABLE `app_users` ADD COLUMN `deleted_at` TIMESTAMP NULL");
+            }
+        } catch (Exception $e) {}
+    }
+
+    $affectedRows = 0;
+    if ($userId > 0 && !empty($email)) {
+        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
+        $stmt->execute([$userId, $email]);
+        $affectedRows = $stmt->rowCount();
+    } elseif ($userId > 0) {
+        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt->execute([$userId]);
+        $affectedRows = $stmt->rowCount();
+    } else {
+        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->execute([$email]);
-        $deletedRows = $stmt->rowCount();
+        $affectedRows = $stmt->rowCount();
     }
 
     echo json_encode([
         'status' => 'success',
-        'message' => 'Account and all associated learning data have been permanently deleted.',
-        'deleted_rows' => $deletedRows
+        'message' => 'Account has been deactivated/deleted in app. Profile data remains archived in admin records.',
+        'affected_rows' => $affectedRows
     ]);
 } catch (Exception $e) {
     http_response_code(500);
