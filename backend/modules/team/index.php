@@ -286,7 +286,7 @@ function renderPermissionsMatrix(string $containerId, array $allModules, array $
     ?>
     <div class="perm-matrix-wrapper" id="<?= $containerId ?>">
         <!-- 1. Header Toolbar: Presets + Search + Category Filter Navigation -->
-        <div class="bg-white border rounded-3 p-3 mb-3 shadow-xs">
+        <div class="bg-white border rounded-3 p-3 mb-3 shadow-sm sticky-top" style="top: -2px; z-index: 20;">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                     <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
@@ -828,101 +828,112 @@ include __DIR__ . '/../../includes/header.php';
 
                 <!-- Edit Member Modal -->
                 <div class="modal fade" id="editMemberModal<?= $member['id'] ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-scrollable modal-xl">
-                        <div class="modal-content rounded-4 border-0 shadow">
-                            <form method="POST" action="">
-                                <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
-                                <input type="hidden" name="action" value="update_member">
-                                <input type="hidden" name="member_id" value="<?= $member['id'] ?>">
+                    <div class="modal-dialog modal-dialog-scrollable modal-xl modal-dialog-centered">
+                        <form method="POST" action="" class="modal-content rounded-4 border-0 shadow">
+                            <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
+                            <input type="hidden" name="action" value="update_member">
+                            <input type="hidden" name="member_id" value="<?= $member['id'] ?>">
 
-                                <div class="modal-header border-bottom py-3">
-                                    <h6 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                                        <i class="bi bi-person-gear text-primary fs-5"></i>
-                                        Edit Member & Screen Privileges &mdash; <?= htmlspecialchars($member['full_name']) ?>
-                                    </h6>
+                            <div class="modal-header border-bottom py-3 bg-white sticky-top z-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 rounded bg-primary-subtle text-primary">
+                                        <i class="bi bi-person-gear fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="modal-title fw-bold text-dark mb-0">
+                                            Edit Member & Screen Privileges &mdash; <?= htmlspecialchars($member['full_name']) ?>
+                                        </h6>
+                                        <div class="text-muted small" style="font-size: 11px;">Update credentials or grant/revoke screen access below</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 d-none d-sm-inline-flex align-items-center gap-1 btn-quick-jump-screens" title="Jump straight down to screen privileges">
+                                        <i class="bi bi-arrow-down-circle"></i>
+                                        <span>Jump to Screens (<?= count($allModules) ?>)</span>
+                                    </button>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <div class="modal-body p-4">
-                                    <!-- 1. Account Details, Username & Password Card -->
-                                    <div class="card border border-primary-subtle bg-light-subtle rounded-3 mb-4 shadow-sm">
-                                        <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
-                                            <div class="fw-bold fs-6">
-                                                <i class="bi bi-person-badge-fill me-2"></i>1. Account Details, Username & Password
-                                            </div>
-                                            <span class="badge bg-white text-primary fw-semibold">Login Credentials</span>
+                            </div>
+                            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important; max-height: calc(88vh - 120px) !important;">
+                                <!-- 1. Account Details, Username & Password Card -->
+                                <div class="card border border-primary-subtle bg-light-subtle rounded-3 mb-3 shadow-xs">
+                                    <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
+                                        <div class="fw-bold fs-6">
+                                            <i class="bi bi-person-badge-fill me-2"></i>1. Account Details, Username & Password
                                         </div>
-                                        <div class="card-body p-3">
-                                            <div class="row g-3">
-                                                <div class="col-12 col-md-3">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Full Name <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" name="full_name" value="<?= htmlspecialchars($member['full_name']) ?>" required>
+                                        <span class="badge bg-white text-primary fw-semibold">Login Credentials</span>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label fw-bold text-dark small mb-1">Full Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="full_name" value="<?= htmlspecialchars($member['full_name']) ?>" required>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label fw-bold text-dark small mb-1">Email Address <span class="text-danger">*</span></label>
+                                                <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($member['email']) ?>" required>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label fw-bold text-dark small mb-1">Login Username <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($member['username']) ?>" required>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label fw-bold text-dark small mb-1">Change Password</label>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" name="new_password" id="editPwInput<?= $member['id'] ?>" placeholder="Leave blank to keep" minlength="6">
+                                                    <button type="button" class="btn btn-outline-secondary btn-toggle-pw" data-target="#editPwInput<?= $member['id'] ?>" title="Show/Hide">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-primary btn-generate-pw" data-target="#editPwInput<?= $member['id'] ?>" title="Generate">
+                                                        <i class="bi bi-shuffle"></i>
+                                                    </button>
                                                 </div>
-                                                <div class="col-12 col-md-3">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Email Address <span class="text-danger">*</span></label>
-                                                    <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($member['email']) ?>" required>
-                                                </div>
-                                                <div class="col-12 col-md-3">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Login Username <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($member['username']) ?>" required>
-                                                </div>
-                                                <div class="col-12 col-md-3">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Change Password</label>
-                                                    <div class="input-group">
-                                                        <input type="password" class="form-control" name="new_password" id="editPwInput<?= $member['id'] ?>" placeholder="Leave blank to keep" minlength="6">
-                                                        <button type="button" class="btn btn-outline-secondary btn-toggle-pw" data-target="#editPwInput<?= $member['id'] ?>" title="Show/Hide">
-                                                            <i class="bi bi-eye"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-primary btn-generate-pw" data-target="#editPwInput<?= $member['id'] ?>" title="Generate">
-                                                            <i class="bi bi-shuffle"></i>
+                                                <?php if (!empty($member['plain_password'])): ?>
+                                                    <div class="form-text small d-flex align-items-center justify-content-between mt-1">
+                                                        <span>Current: <strong class="font-monospace text-primary"><?= htmlspecialchars($member['plain_password']) ?></strong></span>
+                                                        <button type="button" class="btn btn-link btn-sm p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['plain_password']) ?>" data-label="Password" title="Copy Current Password">
+                                                            <i class="bi bi-clipboard" style="font-size: 11px;"></i>
                                                         </button>
                                                     </div>
-                                                    <?php if (!empty($member['plain_password'])): ?>
-                                                        <div class="form-text small d-flex align-items-center justify-content-between mt-1">
-                                                            <span>Current: <strong class="font-monospace text-primary"><?= htmlspecialchars($member['plain_password']) ?></strong></span>
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-secondary copy-credential-btn" data-copy="<?= htmlspecialchars($member['plain_password']) ?>" data-label="Password" title="Copy Current Password">
-                                                                <i class="bi bi-clipboard" style="font-size: 11px;"></i>
-                                                            </button>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="col-12 col-md-6">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Role & Access Type <span class="text-danger">*</span></label>
-                                                    <select class="form-select role-selector" name="role" data-target="#editMatrix<?= $member['id'] ?>" <?= $isSelf ? 'disabled' : '' ?>>
-                                                        <option value="team_member" <?= ($member['role'] === 'team_member') ? 'selected' : '' ?>>Team Member (Custom Screen Privileges)</option>
-                                                        <option value="super_admin" <?= ($member['role'] === 'super_admin') ? 'selected' : '' ?>>Super Administrator (Full Unrestricted Access)</option>
-                                                    </select>
-                                                    <?php if ($isSelf): ?>
-                                                        <input type="hidden" name="role" value="super_admin">
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="col-12 col-md-6">
-                                                    <label class="form-label fw-bold text-dark small mb-1">Account Status <span class="text-danger">*</span></label>
-                                                    <select class="form-select" name="status" <?= $isSelf ? 'disabled' : '' ?>>
-                                                        <option value="active" <?= ($member['status'] === 'active') ? 'selected' : '' ?>>Active (Can Log In)</option>
-                                                        <option value="inactive" <?= ($member['status'] === 'inactive') ? 'selected' : '' ?>>Inactive (Account Blocked)</option>
-                                                    </select>
-                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label fw-bold text-dark small mb-1">Role & Access Type <span class="text-danger">*</span></label>
+                                                <select class="form-select role-selector" name="role" data-target="#editMatrix<?= $member['id'] ?>" <?= $isSelf ? 'disabled' : '' ?>>
+                                                    <option value="team_member" <?= ($member['role'] === 'team_member') ? 'selected' : '' ?>>Team Member (Custom Screen Privileges)</option>
+                                                    <option value="super_admin" <?= ($member['role'] === 'super_admin') ? 'selected' : '' ?>>Super Administrator (Full Unrestricted Access)</option>
+                                                </select>
+                                                <?php if ($isSelf): ?>
+                                                    <input type="hidden" name="role" value="super_admin">
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label fw-bold text-dark small mb-1">Account Status <span class="text-danger">*</span></label>
+                                                <select class="form-select" name="status" <?= $isSelf ? 'disabled' : '' ?>>
+                                                    <option value="active" <?= ($member['status'] === 'active') ? 'selected' : '' ?>>Active (Can Log In)</option>
+                                                    <option value="inactive" <?= ($member['status'] === 'inactive') ? 'selected' : '' ?>>Inactive (Account Blocked)</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- Modern Privileges Matrix -->
-                                    <div class="privileges-section" id="editMatrix<?= $member['id'] ?>" style="<?= ($member['role'] === 'super_admin') ? 'display: none;' : '' ?>">
-                                        <?= renderPermissionsMatrix('editMatrixContainer_' . $member['id'], $allModules, $groupedModules, $memberPerms) ?>
-                                    </div>
-                                    <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="<?= ($member['role'] === 'super_admin') ? '' : 'display: none;' ?>">
-                                        <i class="bi bi-info-circle-fill me-1"></i>
-                                        Super Administrators have unrestricted access to all screens and operations by default.
-                                    </div>
+                                <!-- Modern Privileges Matrix -->
+                                <div class="privileges-section" id="editMatrix<?= $member['id'] ?>" style="<?= ($member['role'] === 'super_admin') ? 'display: none;' : '' ?>">
+                                    <?= renderPermissionsMatrix('editMatrixContainer_' . $member['id'], $allModules, $groupedModules, $memberPerms) ?>
                                 </div>
-                                <div class="modal-footer border-top py-2">
-                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-bb-primary btn-sm">
-                                        <i class="bi bi-check2-circle me-1"></i>Save Member Privileges
-                                    </button>
+                                <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="<?= ($member['role'] === 'super_admin') ? '' : 'display: none;' ?>">
+                                    <i class="bi bi-info-circle-fill me-1"></i>
+                                    Super Administrators have unrestricted access to all screens and operations by default.
                                 </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div class="modal-footer border-top py-2 bg-light sticky-bottom z-3">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-bb-primary btn-sm shadow-sm">
+                                    <i class="bi bi-check2-circle me-1"></i>Save Member Privileges
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -991,100 +1002,111 @@ include __DIR__ . '/../../includes/header.php';
 
 <!-- ADD NEW TEAM MEMBER MODAL -->
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-xl">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="" id="addMemberForm">
-                <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
-                <input type="hidden" name="action" value="add_member">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl modal-dialog-centered">
+        <form method="POST" action="" id="addMemberForm" class="modal-content rounded-4 border-0 shadow">
+            <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
+            <input type="hidden" name="action" value="add_member">
 
-                <div class="modal-header border-bottom py-3">
-                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                        <i class="bi bi-person-plus-fill text-primary"></i>
-                        Add New Team Member & Assign Screen Privileges
-                    </h5>
+            <div class="modal-header border-bottom py-3 bg-white sticky-top z-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded bg-primary-subtle text-primary">
+                        <i class="bi bi-person-plus-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold text-dark mb-0">
+                            Add New Team Member & Assign Screen Privileges
+                        </h6>
+                        <div class="text-muted small" style="font-size: 11px;">Set login credentials and authorize accessible screens below</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 d-none d-sm-inline-flex align-items-center gap-1 btn-quick-jump-screens" title="Jump straight down to screen privileges slider">
+                        <i class="bi bi-arrow-down-circle"></i>
+                        <span>Jump to Screens (<?= count($allModules) ?>)</span>
+                    </button>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 small rounded-3 mb-3">
-                        <i class="bi bi-shield-check text-primary fs-5"></i>
-                        <div>
-                            When this user logs in with their username/email, <strong>only the screens checked below will show in their navigation</strong>, and they can only perform <strong>Add / Update operations</strong> on screens you specifically authorize.
-                        </div>
-                    </div>
-
-                    <!-- 1. Set Login Username, Password & Account Details Card -->
-                    <div class="card border border-primary-subtle bg-light-subtle rounded-3 mb-4 shadow-sm">
-                        <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
-                            <div class="fw-bold fs-6">
-                                <i class="bi bi-key-fill me-2"></i>1. Set Login Username, Password & Account Details
-                            </div>
-                            <span class="badge bg-white text-primary fw-semibold">Required for Login</span>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="row g-3">
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label fw-bold text-dark small mb-1">
-                                        <i class="bi bi-person-fill text-primary me-1"></i>Full Name <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="full_name" placeholder="e.g. Rahul Sharma" required id="newFullName">
-                                </div>
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label fw-bold text-dark small mb-1">
-                                        <i class="bi bi-envelope-fill text-primary me-1"></i>Email Address <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="email" class="form-control" name="email" placeholder="e.g. rahul@bookbanko.com" required id="newEmail">
-                                </div>
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label fw-bold text-dark small mb-1">
-                                        <i class="bi bi-at text-primary me-1"></i>Login Username <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="username" placeholder="e.g. rahul_editor" required id="newUsername">
-                                </div>
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label fw-bold text-dark small mb-1">
-                                        <i class="bi bi-lock-fill text-primary me-1"></i>Login Password <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" name="password" id="newPasswordInput" placeholder="Min 6 characters" minlength="6" required>
-                                        <button type="button" class="btn btn-outline-secondary btn-toggle-pw" data-target="#newPasswordInput" title="Show/Hide">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-primary btn-generate-pw" data-target="#newPasswordInput" title="Generate">
-                                            <i class="bi bi-shuffle"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label fw-bold text-dark small mb-1">
-                                        <i class="bi bi-shield-lock-fill text-primary me-1"></i>Role & Access Level <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-select role-selector" name="role" data-target="#newMatrixContainer">
-                                        <option value="team_member" selected>Team Member (Custom Screen Privileges)</option>
-                                        <option value="super_admin">Super Administrator (Full Unrestricted Access)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modern Privileges Selection Grid -->
-                    <div class="privileges-section" id="newMatrixContainer">
-                        <?= renderPermissionsMatrix('newMatrixContainer', $allModules, $groupedModules, []) ?>
-                    </div>
-
-                    <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="display: none;">
-                        <i class="bi bi-info-circle-fill me-1"></i>
-                        Super Administrators automatically receive full unrestricted access across all screens and features.
+            </div>
+            <div class="modal-body p-3 p-md-4 custom-modal-scrollbar" style="overflow-y: auto !important; max-height: calc(88vh - 120px) !important;">
+                <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 small rounded-3 mb-3">
+                    <i class="bi bi-shield-check text-primary fs-5"></i>
+                    <div>
+                        When this user logs in with their username/email, <strong>only the screens checked below will show in their navigation</strong>, and they can only perform <strong>Add / Update operations</strong> on screens you specifically authorize.
                     </div>
                 </div>
-                <div class="modal-footer border-top py-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-bb-primary btn-sm px-3">
-                        <i class="bi bi-person-check-fill me-1"></i>Create Member & Assign Privileges
-                    </button>
+
+                <!-- 1. Set Login Username, Password & Account Details Card -->
+                <div class="card border border-primary-subtle bg-light-subtle rounded-3 mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div class="fw-bold fs-6">
+                            <i class="bi bi-key-fill me-2"></i>1. Set Login Username, Password & Account Details
+                        </div>
+                        <span class="badge bg-white text-primary fw-semibold">Required for Login</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-person-fill text-primary me-1"></i>Full Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="full_name" placeholder="e.g. Rahul Sharma" required id="newFullName">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-envelope-fill text-primary me-1"></i>Email Address <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" class="form-control" name="email" placeholder="e.g. rahul@bookbanko.com" required id="newEmail">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-at text-primary me-1"></i>Login Username <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="username" placeholder="e.g. rahul_editor" required id="newUsername">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-lock-fill text-primary me-1"></i>Login Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" name="password" id="newPasswordInput" placeholder="Min 6 characters" minlength="6" required>
+                                    <button type="button" class="btn btn-outline-secondary btn-toggle-pw" data-target="#newPasswordInput" title="Show/Hide">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-generate-pw" data-target="#newPasswordInput" title="Generate">
+                                        <i class="bi bi-shuffle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-shield-lock-fill text-primary me-1"></i>Role & Access Level <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select role-selector" name="role" data-target="#newPrivilegesSection">
+                                    <option value="team_member" selected>Team Member (Custom Screen Privileges)</option>
+                                    <option value="super_admin">Super Administrator (Full Unrestricted Access)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </form>
-        </div>
+
+                <!-- Modern Privileges Selection Grid -->
+                <div class="privileges-section" id="newPrivilegesSection">
+                    <?= renderPermissionsMatrix('newMatrixGrid', $allModules, $groupedModules, []) ?>
+                </div>
+
+                <div class="alert alert-info py-2 px-3 small rounded-3 mt-3 super-admin-note" style="display: none;">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Super Administrators automatically receive full unrestricted access across all screens and features.
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2 bg-white sticky-bottom z-3">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-bb-primary btn-sm px-3 shadow-sm">
+                    <i class="bi bi-person-check-fill me-1"></i>Create Member & Assign Privileges
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1492,6 +1514,24 @@ document.addEventListener('DOMContentLoaded', function() {
             var firstInput = this.querySelector('input[type="text"]:not([disabled])');
             if (firstInput) firstInput.focus();
         });
+    });
+
+    // Quick Jump straight down to Screen Privileges slider/matrix
+    document.addEventListener('click', function(e) {
+        var jumpBtn = e.target.closest('.btn-quick-jump-screens');
+        if (!jumpBtn) return;
+        e.preventDefault();
+        var modal = jumpBtn.closest('.modal-content') || jumpBtn.closest('.modal');
+        if (!modal) return;
+        var modalBody = modal.querySelector('.modal-body');
+        var matrix = modal.querySelector('.perm-matrix-wrapper') || modal.querySelector('.privileges-section');
+        if (modalBody && matrix) {
+            var targetPos = matrix.offsetTop - 15;
+            modalBody.scrollTo({
+                top: Math.max(0, targetPos),
+                behavior: 'smooth'
+            });
+        }
     });
 
     // Toggle Table Credential Password Visibility
