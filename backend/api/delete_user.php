@@ -68,22 +68,22 @@ try {
 
     $affectedRows = 0;
     if ($userId > 0 && !empty($email)) {
-        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
+        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->execute([$userId, $email]);
         $affectedRows = $stmt->rowCount();
     } elseif ($userId > 0) {
-        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ?");
         $stmt->execute([$userId]);
         $affectedRows = $stmt->rowCount();
     } else {
-        $stmt = $db->prepare("UPDATE app_users SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
+        $stmt = $db->prepare("DELETE FROM app_users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->execute([$email]);
         $affectedRows = $stmt->rowCount();
     }
 
     echo json_encode([
         'status' => 'success',
-        'message' => 'Account has been deactivated/deleted in app. Profile data remains archived in admin records.',
+        'message' => 'Student account and all data have been permanently deleted successfully.',
         'affected_rows' => $affectedRows
     ]);
 } catch (Exception $e) {

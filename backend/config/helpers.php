@@ -336,6 +336,10 @@ function flash(string $type, string $message): void {
     ];
 }
 
+function setFlashMessage(string $type, string $message): void {
+    flash($type, $message);
+}
+
 function renderFlashMessages(): string {
     if (!isset($_SESSION['flash_messages']) || empty($_SESSION['flash_messages'])) {
         return '';

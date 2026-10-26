@@ -94,12 +94,22 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     exit;
 }
 
-// Handle Delete Student
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+// Handle Delete Student (support both GET and POST)
+$deleteId = 0;
+if (isset($_POST['action']) && $_POST['action'] === 'delete_student' && !empty($_POST['id'])) {
+    $deleteId = (int)$_POST['id'];
+} elseif (isset($_GET['action']) && $_GET['action'] === 'delete' && !empty($_GET['id'])) {
     $deleteId = (int)$_GET['id'];
-    $delStmt = $db->prepare("DELETE FROM app_users WHERE id = ?");
-    $delStmt->execute([$deleteId]);
-    setFlashMessage('success', 'Student record deleted successfully.');
+}
+
+if ($deleteId > 0) {
+    try {
+        $delStmt = $db->prepare("DELETE FROM app_users WHERE id = ?");
+        $delStmt->execute([$deleteId]);
+        flash('success', "Student record #{$deleteId} and all associated data have been deleted successfully.");
+    } catch (Exception $e) {
+        flash('error', "Could not delete student record #{$deleteId}: " . $e->getMessage());
+    }
     header('Location: ' . url('modules/students/index.php'));
     exit;
 }
@@ -166,7 +176,7 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
             </div>
             <div class="mt-2 text-muted small">
-                All registered student accounts (1 to <?= $totalStudents ?> preserved)
+                All registered student accounts (<?= $totalStudents ?> total)
             </div>
         </div>
     </div>
@@ -338,8 +348,8 @@ include __DIR__ . '/../../includes/header.php';
                                 <td class="text-end">
                                     <a href="<?= url('modules/students/index.php?action=delete&id=' . $stu['id']) ?>" 
                                        class="btn btn-sm btn-outline-danger rounded-pill px-2"
-                                       onclick="return confirm('Are you sure you want to delete this student record?');"
-                                       title="Delete Student">
+                                       onclick="return confirm('Are you sure you want to permanently delete student #<?= $stu['id'] ?> (<?= htmlspecialchars(addslashes($stu['username'] ?? 'Student')) ?>)?');"
+                                       title="Delete Student and Data">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 </td>
