@@ -286,7 +286,7 @@ function renderPermissionsMatrix(string $containerId, array $allModules, array $
     ?>
     <div class="perm-matrix-wrapper" id="<?= $containerId ?>">
         <!-- 1. Header Toolbar: Presets + Search + Category Filter Navigation -->
-        <div class="bg-white border rounded-3 p-3 mb-3 shadow-sm sticky-top" style="top: -2px; z-index: 20;">
+        <div class="bg-white border rounded-3 p-3 mb-3 shadow-sm">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                     <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
@@ -866,7 +866,7 @@ include __DIR__ . '/../../includes/header.php';
                             <input type="hidden" name="action" value="update_member">
                             <input type="hidden" name="member_id" value="<?= $member['id'] ?>">
 
-                            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white sticky-top z-3">
+                            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="p-2 rounded bg-primary-subtle text-primary">
                                         <i class="bi bi-person-gear fs-5"></i>
@@ -959,7 +959,7 @@ include __DIR__ . '/../../includes/header.php';
                                     Super Administrators have unrestricted access to all screens and operations by default.
                                 </div>
                             </div>
-                            <div class="modal-footer border-top py-2 bg-light sticky-bottom z-3">
+                            <div class="modal-footer border-top py-2 bg-light">
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-bb-primary btn-sm shadow-sm">
                                     <i class="bi bi-check2-circle me-1"></i>Save Member Privileges
@@ -1039,7 +1039,7 @@ include __DIR__ . '/../../includes/header.php';
             <input type="hidden" name="csrf_token" value="<?= getCSRFToken() ?>">
             <input type="hidden" name="action" value="add_member">
 
-            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white sticky-top z-3">
+            <div class="modal-header border-bottom py-3 px-3 px-md-4 bg-white">
                 <div class="d-flex align-items-center gap-2">
                     <div class="p-2 rounded bg-primary-subtle text-primary">
                         <i class="bi bi-person-plus-fill fs-5"></i>
@@ -1132,7 +1132,7 @@ include __DIR__ . '/../../includes/header.php';
                     Super Administrators automatically receive full unrestricted access across all screens and features.
                 </div>
             </div>
-            <div class="modal-footer border-top py-2 bg-white sticky-bottom z-3">
+            <div class="modal-footer border-top py-2 bg-white">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-bb-primary btn-sm px-3 shadow-sm">
                     <i class="bi bi-person-check-fill me-1"></i>Create Member & Assign Privileges
