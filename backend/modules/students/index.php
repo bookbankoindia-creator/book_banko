@@ -36,6 +36,7 @@ if ($driver === 'pgsql') {
     ");
     try {
         $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password VARCHAR(255) NULL;");
+        $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL;");
         $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS is_deleted SMALLINT DEFAULT 0;");
         $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;");
     } catch (Exception $e) {}
@@ -64,6 +65,10 @@ if ($driver === 'pgsql') {
         if (empty($cols)) {
             $db->exec("ALTER TABLE `app_users` ADD COLUMN `password` VARCHAR(255) NULL AFTER `email`");
         }
+        $colsPhone = $db->query("SHOW COLUMNS FROM `app_users` LIKE 'phone'")->fetchAll();
+        if (empty($colsPhone)) {
+            $db->exec("ALTER TABLE `app_users` ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL AFTER `email`");
+        }
     } catch (Exception $e) {}
 }
 
@@ -72,14 +77,15 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=book_banko_students_' . date('Y_m_d_His') . '.csv');
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['ID', 'Username / Student Name', 'Email ID', 'School Name', 'City', 'District', 'State', 'Board', 'Medium', 'Standard', 'Registered On']);
+    fputcsv($output, ['ID', 'Username / Student Name', 'Email ID', 'Phone Number', 'School Name', 'City', 'District', 'State', 'Board', 'Medium', 'Standard', 'Registered On']);
 
-    $exportStmt = $db->query("SELECT id, username, email, school_name, city, district, state, board, medium, standard, created_at FROM app_users ORDER BY id DESC");
+    $exportStmt = $db->query("SELECT id, username, email, phone, school_name, city, district, state, board, medium, standard, created_at FROM app_users ORDER BY id DESC");
     while ($row = $exportStmt->fetch(PDO::FETCH_ASSOC)) {
         fputcsv($output, [
             $row['id'],
             $row['username'],
             $row['email'],
+            !empty($row['phone']) ? '+91 ' . $row['phone'] : 'N/A',
             $row['school_name'],
             $row['city'],
             $row['district'],
@@ -123,10 +129,11 @@ $query = "SELECT * FROM app_users WHERE 1=1";
 $params = [];
 
 if (!empty($search)) {
-    $query .= " AND (LOWER(username) LIKE ? OR LOWER(email) LIKE ? OR LOWER(school_name) LIKE ? OR LOWER(city) LIKE ? OR LOWER(district) LIKE ?)";
+    $query .= " AND (LOWER(username) LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ? OR LOWER(school_name) LIKE ? OR LOWER(city) LIKE ? OR LOWER(district) LIKE ?)";
     $st = '%' . strtolower($search) . '%';
     $params[] = $st;
     $params[] = $st;
+    $params[] = '%' . preg_replace('/[^0-9]/', '', $search) . '%';
     $params[] = $st;
     $params[] = $st;
     $params[] = $st;
@@ -236,7 +243,7 @@ include __DIR__ . '/../../includes/header.php';
             <div class="col-md-5 col-lg-4">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control bg-light border-start-0" placeholder="Search by name, email, school, city..." value="<?= htmlspecialchars($search) ?>">
+                    <input type="text" name="search" class="form-control bg-light border-start-0" placeholder="Search by name, email, phone, school, city..." value="<?= htmlspecialchars($search) ?>">
                 </div>
             </div>
             <div class="col-md-3 col-lg-3">
@@ -281,6 +288,7 @@ include __DIR__ . '/../../includes/header.php';
                             <th scope="col" style="width: 60px;">#</th>
                             <th scope="col">Student Name</th>
                             <th scope="col">Email ID</th>
+                            <th scope="col">Phone Number</th>
                             <th scope="col">School Name</th>
                             <th scope="col">City & District</th>
                             <th scope="col">State</th>
@@ -319,6 +327,17 @@ include __DIR__ . '/../../includes/header.php';
                                     <a href="mailto:<?= htmlspecialchars($stu['email']) ?>" class="text-decoration-none text-dark">
                                         <i class="bi bi-envelope text-secondary me-1"></i><?= htmlspecialchars($stu['email']) ?>
                                     </a>
+                                </td>
+                                <td>
+                                    <?php if (!empty($stu['phone'])): ?>
+                                        <a href="tel:+91<?= htmlspecialchars($stu['phone']) ?>" class="text-decoration-none text-dark">
+                                            <span class="badge bg-light text-dark border px-2 py-1 font-monospace" style="font-size: 12px;">
+                                                <i class="bi bi-telephone-fill text-success me-1"></i>+91 <?= htmlspecialchars($stu['phone']) ?>
+                                            </span>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted small">N/A</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="fw-semibold text-dark"><i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($stu['school_name']) ?></div>

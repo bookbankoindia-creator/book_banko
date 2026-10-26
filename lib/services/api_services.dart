@@ -1169,6 +1169,7 @@ class ApiService {
   static Future<UserModel> saveUser({
     required String username,
     required String email,
+    String? phone,
     String? password,
     required String schoolName,
     required String city,
@@ -1182,6 +1183,7 @@ class ApiService {
     final payload = {
       'username': username.trim(),
       'email': email.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
       if (password != null && password.trim().isNotEmpty) 'password': password.trim(),
       'school_name': schoolName.trim(),
       'city': city.trim(),
@@ -1213,6 +1215,7 @@ class ApiService {
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       username: username.trim(),
       email: email.trim(),
+      phone: phone?.trim(),
       password: password?.trim(),
       schoolName: schoolName.trim(),
       city: city.trim(),

@@ -60,13 +60,13 @@ try {
     $limit  = min(100, max(1, (int)($_GET['limit'] ?? 50)));
     $offset = max(0, (int)($_GET['offset'] ?? 0));
 
-    $sql = "SELECT id, username, email, school_name, city, district, state, board, medium, standard, created_at FROM app_users";
+    $sql = "SELECT id, username, email, phone, school_name, city, district, state, board, medium, standard, created_at FROM app_users";
     $params = [];
 
     if (!empty($search)) {
-        $sql .= " WHERE LOWER(username) LIKE ? OR LOWER(email) LIKE ? OR LOWER(school_name) LIKE ? OR LOWER(city) LIKE ? OR LOWER(district) LIKE ? OR LOWER(state) LIKE ?";
+        $sql .= " WHERE LOWER(username) LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ? OR LOWER(school_name) LIKE ? OR LOWER(city) LIKE ? OR LOWER(district) LIKE ? OR LOWER(state) LIKE ?";
         $searchTerm = '%' . strtolower($search) . '%';
-        $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm];
+        $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm];
     }
 
     $sql .= " ORDER BY id DESC LIMIT {$limit} OFFSET {$offset}";

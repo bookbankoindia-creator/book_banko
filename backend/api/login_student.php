@@ -103,6 +103,7 @@ try {
             'id' => (int)$user['id'],
             'username' => $user['username'],
             'email' => $user['email'],
+            'phone' => $user['phone'] ?? null,
             'password' => $user['password'],
             'school_name' => $user['school_name'],
             'city' => $user['city'],

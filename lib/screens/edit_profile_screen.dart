@@ -18,6 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _nameController;
+  late TextEditingController _phoneController;
   late TextEditingController _schoolController;
   late TextEditingController _cityController;
   late TextEditingController _districtController;
@@ -59,6 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = appState.currentUser;
 
     _nameController = TextEditingController(text: user?.username ?? '');
+    _phoneController = TextEditingController(text: user?.phone ?? '');
     _schoolController = TextEditingController(text: user?.schoolName ?? '');
     _cityController = TextEditingController(text: user?.city ?? '');
     _districtController = TextEditingController(text: user?.district ?? '');
@@ -70,6 +72,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _schoolController.dispose();
     _cityController.dispose();
     _districtController.dispose();
@@ -97,6 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final updatedUser = await ApiService.saveUser(
         username: _nameController.text.trim(),
         email: user?.email ?? '',
+        phone: _phoneController.text.trim(),
         password: user?.password,
         schoolName: _schoolController.text.trim(),
         city: _cityController.text.trim(),
@@ -320,6 +324,72 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             hint: 'Enter your full name',
                             icon: Icons.person_outline_rounded,
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          _buildFieldLabel('Phone Number'),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                              letterSpacing: 0.8,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Enter 10-digit number',
+                              hintStyle: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 13.5),
+                              prefixIcon: Container(
+                                padding: const EdgeInsets.only(left: 14, right: 10),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🇮🇳', style: TextStyle(fontSize: 18)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '+91',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(height: 20, width: 1.2, color: const Color(0xFFCBD5E1)),
+                                    const SizedBox(width: 4),
+                                  ],
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              if (v.trim().length != 10) return 'Must be exactly 10 digits';
+                              if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v.trim())) return 'Enter a valid 10-digit mobile number';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 16),
 

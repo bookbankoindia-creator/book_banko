@@ -274,6 +274,61 @@ class ProfileScreen extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (user?.phone != null && user!.phone!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () {
+                                final phone = '+91 ${user.phone!.trim()}';
+                                Clipboard.setData(ClipboardData(text: phone));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Phone copied: $phone',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: const Color(0xFF0F172A),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.phone_rounded,
+                                      size: 14,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      '+91 ${user!.phone!.trim()}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.copy_rounded,
+                                      size: 12,
+                                      color: Color(0xFF94A3B8),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
 
                           // Student Status & Key Tags

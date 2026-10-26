@@ -57,6 +57,7 @@ try {
         ");
         try {
             $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password VARCHAR(255) NULL;");
+            $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL;");
             $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS is_deleted SMALLINT DEFAULT 0;");
             $db->exec("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;");
         } catch (Exception $e) {}
@@ -66,6 +67,7 @@ try {
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
                 `username` VARCHAR(150) NOT NULL,
                 `email` VARCHAR(150) NOT NULL,
+                `phone` VARCHAR(20) DEFAULT NULL,
                 `password` VARCHAR(255) DEFAULT NULL,
                 `school_name` VARCHAR(255) NOT NULL,
                 `city` VARCHAR(100) NOT NULL,
@@ -85,6 +87,10 @@ try {
             if (empty($cols)) {
                 $db->exec("ALTER TABLE `app_users` ADD COLUMN `password` VARCHAR(255) NULL AFTER `email`");
             }
+            $colsPhone = $db->query("SHOW COLUMNS FROM `app_users` LIKE 'phone'")->fetchAll();
+            if (empty($colsPhone)) {
+                $db->exec("ALTER TABLE `app_users` ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL AFTER `email`");
+            }
         } catch (Exception $e) {}
     }
 
@@ -103,6 +109,18 @@ try {
 
     $username   = trim($data['username'] ?? '');
     $email      = trim($data['email'] ?? '');
+    $phoneRaw   = trim($data['phone'] ?? $data['phone_number'] ?? $data['mobile'] ?? '');
+    $phone      = null;
+    if (!empty($phoneRaw)) {
+        $digitsOnly = preg_replace('/[^0-9]/', '', $phoneRaw);
+        if (strlen($digitsOnly) === 12 && substr($digitsOnly, 0, 2) === '91') {
+            $phone = substr($digitsOnly, 2);
+        } elseif (strlen($digitsOnly) === 11 && substr($digitsOnly, 0, 1) === '0') {
+            $phone = substr($digitsOnly, 1);
+        } else {
+            $phone = $digitsOnly;
+        }
+    }
     $password   = isset($data['password']) && trim((string)$data['password']) !== '' ? trim((string)$data['password']) : null;
     $schoolName = trim($data['school_name'] ?? '');
     $city       = trim($data['city'] ?? '');
@@ -171,6 +189,7 @@ try {
         $updateStmt = $db->prepare("
             UPDATE app_users 
             SET username = ?,
+                phone = COALESCE(?, phone),
                 password = COALESCE(?, password),
                 school_name = ?,
                 city = ?,
@@ -187,6 +206,7 @@ try {
         ");
         $updateStmt->execute([
             $username,
+            $phone,
             $password,
             $schoolName,
             $city,
@@ -204,12 +224,13 @@ try {
     } else {
         // Insert new record
         $insertStmt = $db->prepare("
-            INSERT INTO app_users (username, email, password, school_name, city, district, state, acknowledged, board, medium, standard, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO app_users (username, email, phone, password, school_name, city, district, state, acknowledged, board, medium, standard, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ");
         $insertStmt->execute([
             $username,
             $email,
+            $phone,
             $password,
             $schoolName,
             $city,
@@ -237,6 +258,7 @@ try {
             'id' => (int)($userRecord['id'] ?? $userId),
             'username' => $userRecord['username'] ?? $username,
             'email' => $userRecord['email'] ?? $email,
+            'phone' => $userRecord['phone'] ?? $phone,
             'password' => $userRecord['password'] ?? $password,
             'school_name' => $userRecord['school_name'] ?? $schoolName,
             'city' => $userRecord['city'] ?? $city,

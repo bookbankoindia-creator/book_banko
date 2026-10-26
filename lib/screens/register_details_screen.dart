@@ -20,6 +20,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
 
   String _email = '';
   final _usernameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _schoolController = TextEditingController();
   final _cityController = TextEditingController();
@@ -57,6 +58,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _schoolController.dispose();
     _cityController.dispose();
@@ -92,6 +94,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
       final user = await ApiService.saveUser(
         username: _usernameController.text.trim(),
         email: _email.trim().toLowerCase(),
+        phone: _phoneController.text.trim(),
         password: _passwordController.text.trim(),
         schoolName: _schoolController.text.trim(),
         city: _cityController.text.trim(),
@@ -373,7 +376,80 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // 2. Password (Standard 8-Character Pattern)
+                            // 2. Phone Number with Country Code (+91)
+                            _buildInputLabel(
+                              'Phone Number',
+                              isRequired: true,
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              maxLength: 10,
+                              buildCounter: (
+                                context, {
+                                required currentLength,
+                                required isFocused,
+                                maxLength,
+                              }) => null,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.8,
+                              ),
+                              decoration: _buildInputDecoration(
+                                hint: 'Enter 10-digit number',
+                                prefixWidget: Container(
+                                  padding: const EdgeInsets.only(left: 14, right: 10),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        '🇮🇳',
+                                        style: TextStyle(fontSize: 18),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '+91',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        height: 20,
+                                        width: 1.2,
+                                        color: const Color(0xFFCBD5E1),
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              textInputAction: TextInputAction.next,
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Please enter your phone number';
+                                }
+                                final clean = val.trim();
+                                if (clean.length != 10) {
+                                  return 'Phone number must be exactly 10 digits';
+                                }
+                                if (!RegExp(r'^[6-9]\d{9}$').hasMatch(clean)) {
+                                  return 'Enter a valid 10-digit mobile number';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 3. Password (Standard 8-Character Pattern)
                             _buildInputLabel(
                               'Create Password',
                               isRequired: true,
@@ -708,7 +784,8 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
 
   InputDecoration _buildInputDecoration({
     required String hint,
-    required IconData icon,
+    IconData? icon,
+    Widget? prefixWidget,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
@@ -717,7 +794,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
         fontSize: 14,
         color: AppColors.textMuted,
       ),
-      prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
+      prefixIcon: prefixWidget ?? (icon != null ? Icon(icon, color: AppColors.textMuted, size: 20) : null),
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFFF8FAFC),

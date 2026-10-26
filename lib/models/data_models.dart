@@ -788,6 +788,7 @@ class UserModel {
   final int id;
   final String username;
   final String email;
+  final String? phone;
   final String? password;
   final String schoolName;
   final String city;
@@ -803,6 +804,7 @@ class UserModel {
     required this.id,
     required this.username,
     required this.email,
+    this.phone,
     this.password,
     required this.schoolName,
     required this.city,
@@ -820,6 +822,7 @@ class UserModel {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString(),
       password: json['password']?.toString(),
       schoolName: json['school_name']?.toString() ?? '',
       city: json['city']?.toString() ?? '',
@@ -845,6 +848,7 @@ class UserModel {
       'id': id,
       'username': username,
       'email': email,
+      if (phone != null && phone!.isNotEmpty) 'phone': phone,
       if (password != null && password!.isNotEmpty) 'password': password,
       'school_name': schoolName,
       'city': city,
@@ -862,6 +866,7 @@ class UserModel {
     int? id,
     String? username,
     String? email,
+    String? phone,
     String? password,
     String? schoolName,
     String? city,
@@ -877,6 +882,7 @@ class UserModel {
       id: id ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
+      phone: phone ?? this.phone,
       password: password ?? this.password,
       schoolName: schoolName ?? this.schoolName,
       city: city ?? this.city,
