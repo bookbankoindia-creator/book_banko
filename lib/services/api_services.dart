@@ -1261,6 +1261,30 @@ class ApiService {
     return true;
   }
 
+  /// Verify if a student email is registered in Book Banko before sending OTP
+  static Future<Map<String, dynamic>> checkEmailRegistered(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    try {
+      final response = await _postWithFallback('check_student_email.php', {
+        'email': cleanEmail,
+      });
+
+      if (response != null && (response.statusCode == 200 || response.statusCode == 400 || response.statusCode == 404)) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] checkEmailRegistered error: $e');
+    }
+    return {
+      'status': 'error',
+      'exists': false,
+      'message': 'Unable to verify email address. Please check your internet connection.',
+    };
+  }
+
   /// Reset / update user password
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
