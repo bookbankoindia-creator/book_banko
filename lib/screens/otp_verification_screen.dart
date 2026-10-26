@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../models/app_state.dart';
 import '../services/supabase_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/logo_widget.dart';
@@ -18,6 +20,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _otpController = TextEditingController();
   String _email = '';
   bool _isForgotPassword = false;
+  bool _isDeleteAccount = false;
   bool _isVerifying = false;
   bool _isResending = false;
   String? _errorMessage;
@@ -32,6 +35,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     if (args is Map<String, dynamic>) {
       _email = args['email'] ?? '';
       _isForgotPassword = args['isForgotPassword'] ?? false;
+      _isDeleteAccount = args['isDeleteAccount'] ?? false;
       final initialOtp = args['initialOtp'] as String?;
       if (initialOtp != null && initialOtp.isNotEmpty && _otpController.text.isEmpty) {
         _otpController.text = initialOtp;
@@ -88,6 +92,44 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     if (res.success) {
+      if (_isDeleteAccount) {
+        setState(() {
+          _isVerifying = true;
+        });
+
+        final appState = Provider.of<BookBankoAppState>(context, listen: false);
+        await appState.deleteAccount(email: _email);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Your account has been deleted permanently from Book Banko.',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/signup_email',
+          (route) => false,
+        );
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -183,14 +225,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           children: [
             // Top Header Bar
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                  colors: _isDeleteAccount
+                      ? const [Color(0xFF7F1D1D), Color(0xFF991B1B), Color(0xFFDC2626)]
+                      : const [Color(0xFF0F172A), Color(0xFF1E3A8A)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-                boxShadow: [
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+                boxShadow: const [
                   BoxShadow(
                     color: Color(0x1F0F172A),
                     blurRadius: 20,
@@ -229,20 +273,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Verify Email Code',
+                              _isDeleteAccount ? 'Confirm Account Deletion' : 'Verify Email Code',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.4,
                               ),
                             ),
                             Text(
-                              _isForgotPassword ? 'Password Recovery Verification' : 'Step 2 of 3: OTP Verification',
+                              _isDeleteAccount
+                                  ? 'Enter 6-Digit OTP to Delete Profile'
+                                  : (_isForgotPassword
+                                      ? 'Password Recovery Verification'
+                                      : 'Step 2 of 3: OTP Verification'),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF93C5FD),
+                                color: _isDeleteAccount ? const Color(0xFFFECACA) : const Color(0xFF93C5FD),
                               ),
                             ),
                           ],
@@ -285,11 +333,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
+                                color: _isDeleteAccount ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0xFFDBEAFE), width: 2),
+                                border: Border.all(
+                                  color: _isDeleteAccount ? const Color(0xFFFECACA) : const Color(0xFFDBEAFE),
+                                  width: 2,
+                                ),
                               ),
-                              child: const Icon(Icons.mark_email_read_rounded, color: AppColors.primary, size: 30),
+                              child: Icon(
+                                _isDeleteAccount ? Icons.delete_forever_rounded : Icons.mark_email_read_rounded,
+                                color: _isDeleteAccount ? const Color(0xFFDC2626) : AppColors.primary,
+                                size: 30,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -439,6 +494,36 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           ),
                           const SizedBox(height: 18),
 
+                          if (_isDeleteAccount) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Warning: Verifying this OTP will permanently delete your student profile, reading history, and registration records from Book Banko. This action cannot be undone.',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: const Color(0xFF991B1B),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           // Verify Button
                           SizedBox(
                             width: double.infinity,
@@ -446,12 +531,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+                                gradient: LinearGradient(
+                                  colors: _isDeleteAccount
+                                      ? const [Color(0xFFDC2626), Color(0xFF991B1B)]
+                                      : const [Color(0xFF0F172A), Color(0xFF1E3A8A)],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                    color: (_isDeleteAccount ? const Color(0xFFDC2626) : const Color(0xFF1E3A8A))
+                                        .withValues(alpha: 0.35),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -465,12 +553,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                         height: 20,
                                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                       )
-                                    : const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                    : Icon(
+                                        _isDeleteAccount ? Icons.delete_forever_rounded : Icons.check_circle_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                 label: Text(
-                                  _isVerifying ? 'Verifying OTP...' : 'Verify OTP & Continue',
+                                  _isVerifying
+                                      ? (_isDeleteAccount ? 'Deleting Account...' : 'Verifying OTP...')
+                                      : (_isDeleteAccount
+                                          ? 'Verify & Delete Account Permanently'
+                                          : 'Verify OTP & Continue'),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
+                                    fontSize: 14,
                                     color: Colors.white,
                                   ),
                                 ),

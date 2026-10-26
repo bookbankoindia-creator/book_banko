@@ -133,11 +133,20 @@ class BookBankoAppState extends ChangeNotifier {
   }
 
   /// Permanently delete student account and clear local storage
-  Future<bool> deleteAccount() async {
-    if (_currentUser != null) {
+  Future<bool> deleteAccount({String? email}) async {
+    String? targetEmail = email?.trim() ?? _currentUser?.email;
+    int? targetId = _currentUser?.id;
+
+    if (targetEmail == null || targetEmail.isEmpty) {
+      final saved = await PreferenceService.getUserData();
+      targetEmail = saved?.email;
+      targetId ??= saved?.id;
+    }
+
+    if (targetEmail != null && targetEmail.isNotEmpty) {
       await ApiService.deleteUser(
-        userId: _currentUser!.id,
-        email: _currentUser!.email,
+        userId: targetId,
+        email: targetEmail,
       );
     }
     await logOut();

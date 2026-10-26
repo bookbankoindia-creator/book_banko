@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../models/app_state.dart';
 import '../models/data_models.dart';
+import '../services/preference_service.dart';
+import '../services/supabase_auth_service.dart';
 import '../theme/app_theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -1497,7 +1499,34 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteAccount(BuildContext context) {
+  void _confirmDeleteAccount(BuildContext context) async {
+    final appState = Provider.of<BookBankoAppState>(context, listen: false);
+    String? userEmail = appState.currentUser?.email.trim();
+
+    if (userEmail == null || userEmail.isEmpty) {
+      final savedUser = await PreferenceService.getUserData();
+      userEmail = savedUser?.email.trim();
+    }
+
+    if (userEmail == null || userEmail.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No logged-in email found to verify account deletion.',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+      return;
+    }
+
+    final targetEmail = userEmail;
+
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1527,13 +1556,44 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
         ),
-        content: Text(
-          'This will permanently erase your profile, reading history, and saved preferences. This action cannot be undone.',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13.5,
-            color: AppColors.textSecondary,
-            height: 1.4,
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will permanently erase your profile, reading history, and registration records from Book Banko.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.shield_outlined, color: Color(0xFFDC2626), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'For your security, a 6-digit OTP code will be sent to:\n$targetEmail',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF991B1B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -1547,44 +1607,111 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
-              final appState = Provider.of<BookBankoAppState>(
-                context,
-                listen: false,
-              );
-              await appState.deleteAccount();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Your account has been deleted permanently.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w600,
-                      ),
+
+              // Show loading overlay
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingCtx) => Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    backgroundColor: const Color(0xFFDC2626),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          color: Color(0xFFDC2626),
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Sending verification OTP...',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/signup_email',
-                  (route) => false,
-                );
+                ),
+              );
+
+              final res = await SupabaseAuthService.sendEmailOtp(targetEmail);
+
+              if (context.mounted) {
+                Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+
+                if (res.isRateLimited && res.backupOtp != null) {
+                  Clipboard.setData(ClipboardData(text: res.backupOtp!));
+                }
+
+                if (res.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        res.isRateLimited
+                            ? 'Test OTP code auto-copied to clipboard: ${res.backupOtp}'
+                            : 'Verification OTP sent to $targetEmail',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                      ),
+                      backgroundColor: const Color(0xFF0F172A),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+
+                  Navigator.pushNamed(
+                    context,
+                    '/otp_verification',
+                    arguments: {
+                      'email': targetEmail,
+                      'isDeleteAccount': true,
+                      'initialOtp': (res.isRateLimited && res.backupOtp != null) ? res.backupOtp : null,
+                    },
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Failed to send OTP: ${res.message}',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                      ),
+                      backgroundColor: const Color(0xFFDC2626),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Delete Permanently',
+            icon: const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+            label: Text(
+              'Send OTP & Delete',
               style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),

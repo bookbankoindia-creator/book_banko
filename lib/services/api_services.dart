@@ -114,6 +114,52 @@ class ApiService {
     return null;
   }
 
+  /// Helper to make HTTP POST requests with fast candidate fallback and persistent connection
+  static Future<http.Response?> _postWithFallback(
+    String endpoint,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
+    final bodyJson = json.encode(body);
+    final headers = {'Content-Type': 'application/json'};
+
+    // 1. If active base URL is already established, try it first
+    if (_activeBaseUrl.isNotEmpty) {
+      try {
+        final uri = Uri.parse('$_activeBaseUrl/$endpoint');
+        final res = await _httpClient.post(uri, headers: headers, body: bodyJson).timeout(timeout);
+        if (res.statusCode == 200 || res.statusCode == 201) return res;
+      } catch (e) {
+        debugPrint('[ApiService] Active URL timeout/fail ($_activeBaseUrl/$endpoint): $e');
+      }
+    }
+
+    // 2. Try candidate URLs (live working Neon host first)
+    final tested = <String>{};
+    if (_activeBaseUrl.isNotEmpty) tested.add(_activeBaseUrl);
+
+    for (final base in _candidateBaseUrls) {
+      if (tested.contains(base)) continue;
+      tested.add(base);
+
+      try {
+        final uri = Uri.parse('$base/$endpoint');
+        final res = await _httpClient.post(uri, headers: headers, body: bodyJson).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          _activeBaseUrl = base;
+          _prefs?.setString(_prefKeyActiveHost, base);
+          debugPrint('[ApiService] Connected to host for POST: $base');
+          return res;
+        }
+      } catch (_) {
+        // Try next candidate
+      }
+    }
+
+    debugPrint('[ApiService] All endpoints failed for POST $endpoint');
+    return null;
+  }
+
   // ===========================================================================
   // 0. BOARDS (Instant Cached + Stale-While-Revalidate)
   // ===========================================================================
@@ -1148,16 +1194,9 @@ class ApiService {
     };
 
     try {
-      final workingBase = baseUrl;
-      final uri = Uri.parse('$workingBase/save_user.php');
+      final response = await _postWithFallback('save_user.php', payload);
 
-      final response = await _httpClient.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(payload),
-      ).timeout(const Duration(seconds: 7));
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
         final decoded = json.decode(response.body);
         if (decoded['status'] == 'success' && decoded['data'] != null) {
           final user = UserModel.fromJson(Map<String, dynamic>.from(decoded['data']));
@@ -1191,21 +1230,21 @@ class ApiService {
 
   /// Delete student user account and learning data permanently
   static Future<bool> deleteUser({int? userId, required String email}) async {
-    try {
-      final workingBase = baseUrl;
-      final uri = Uri.parse('$workingBase/delete_user.php');
-      final response = await _httpClient.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          if (userId != null && userId > 0) 'user_id': userId,
-          'email': email.trim(),
-        }),
-      ).timeout(const Duration(seconds: 8));
+    final cleanEmail = email.trim().toLowerCase();
+    debugPrint('[ApiService] deleteUser initiated for: $cleanEmail (ID: $userId)');
 
-      if (response.statusCode == 200) {
+    final payload = <String, dynamic>{
+      'email': cleanEmail,
+      if (userId != null && userId > 0) 'user_id': userId,
+    };
+
+    try {
+      final response = await _postWithFallback('delete_user.php', payload);
+
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
         final decoded = json.decode(response.body);
         if (decoded['status'] == 'success') {
+          debugPrint('[ApiService] deleteUser confirmed by backend server: ${response.body}');
           await PreferenceService.clearAll();
           return true;
         }
@@ -1213,6 +1252,7 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService] deleteUser notice: $e');
     }
+
     // Clear locally regardless to protect user privacy
     await PreferenceService.clearAll();
     return true;

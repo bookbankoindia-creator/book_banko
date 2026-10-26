@@ -46,20 +46,25 @@ try {
         exit;
     }
 
+    $deletedRows = 0;
     if ($userId > 0 && !empty($email)) {
-        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ? OR LOWER(email) = LOWER(?)");
+        $stmt = $db->prepare("DELETE FROM app_users WHERE id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->execute([$userId, $email]);
+        $deletedRows = $stmt->rowCount();
     } elseif ($userId > 0) {
         $stmt = $db->prepare("DELETE FROM app_users WHERE id = ?");
         $stmt->execute([$userId]);
+        $deletedRows = $stmt->rowCount();
     } else {
-        $stmt = $db->prepare("DELETE FROM app_users WHERE LOWER(email) = LOWER(?)");
+        $stmt = $db->prepare("DELETE FROM app_users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))");
         $stmt->execute([$email]);
+        $deletedRows = $stmt->rowCount();
     }
 
     echo json_encode([
         'status' => 'success',
-        'message' => 'Account and all associated learning data have been permanently deleted.'
+        'message' => 'Account and all associated learning data have been permanently deleted.',
+        'deleted_rows' => $deletedRows
     ]);
 } catch (Exception $e) {
     http_response_code(500);
