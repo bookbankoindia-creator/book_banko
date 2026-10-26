@@ -63,6 +63,22 @@ $(document).ready(function() {
                 }
             });
         });
+
+        // Auto-adjust columns once web fonts finish loading to prevent header misalignments
+        if (document.fonts) {
+            document.fonts.ready.then(function() {
+                if ($.fn.dataTable) {
+                    $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+                }
+            });
+        }
+
+        // Auto-adjust columns when any modal is shown or hidden
+        $('.modal').on('shown.bs.modal hidden.bs.modal', function() {
+            if ($.fn.dataTable) {
+                $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+            }
+        });
     }
 
     // Restore desktop sidebar collapsed preference if saved

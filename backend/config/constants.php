@@ -11,6 +11,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // Set Default Timezone
 date_default_timezone_set('Asia/Kolkata');
 
+// Error reporting: Hide PHP notices & warnings in production/Vercel
+if (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false) {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
+}
+
 // App Info
 define('APP_NAME', 'Book Banko');
 define('APP_TAGLINE', 'Educational Resources & PDF Reader');

@@ -246,6 +246,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $db->query("SELECT * FROM admins ORDER BY (role = 'super_admin') DESC, id ASC");
 $teamMembers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Calculate team statistics for metric cards
+$totalMembers = count($teamMembers);
+$activeMembers = 0;
+$superAdminCount = 0;
+foreach ($teamMembers as $m) {
+    if (($m['status'] ?? '') === 'active') {
+        $activeMembers++;
+    }
+    if (($m['role'] ?? '') === 'super_admin') {
+        $superAdminCount++;
+    }
+}
+
 // Group modules by category
 $groupedModules = [];
 foreach ($allModules as $modKey => $modInfo) {
@@ -463,46 +476,66 @@ include __DIR__ . '/../../includes/header.php';
 <!-- Metric Cards -->
 <div class="row g-3 mb-4">
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="bb-card p-3 d-flex align-items-center gap-3">
-            <div class="rounded-3 p-3 text-white" style="background: linear-gradient(135deg, #0061A4, #2196F3);">
-                <i class="bi bi-people-fill fs-3"></i>
-            </div>
-            <div>
-                <div class="text-secondary small fw-bold">TOTAL TEAM MEMBERS</div>
-                <div class="fs-4 fw-bold text-dark"><?= $totalMembers ?></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="bb-card p-3 d-flex align-items-center gap-3">
-            <div class="rounded-3 p-3 text-white" style="background: linear-gradient(135deg, #10B981, #059669);">
-                <i class="bi bi-check-circle-fill fs-3"></i>
-            </div>
-            <div>
-                <div class="text-secondary small fw-bold">ACTIVE ACCOUNTS</div>
-                <div class="fs-4 fw-bold text-dark"><?= $activeMembers ?></div>
+        <div class="stat-card h-100 hover-shadow border-0 shadow-sm" style="background: linear-gradient(145deg, #ffffff 0%, #f4f8fe 100%); border: 1px solid rgba(0, 97, 164, 0.12) !important;">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0 flex-grow-1">
+                    <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.6px;">Total Team</span>
+                    <div class="stat-value text-dark mt-1"><?= (int)$totalMembers ?></div>
+                    <div class="text-muted small mt-2 d-flex align-items-center gap-1" style="font-size: 11.5px;">
+                        <i class="bi bi-people-fill text-primary"></i> Registered Staff
+                    </div>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-blue flex-shrink-0 shadow-sm mb-0">
+                    <i class="bi bi-people-fill"></i>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="bb-card p-3 d-flex align-items-center gap-3">
-            <div class="rounded-3 p-3 text-white" style="background: linear-gradient(135deg, #F59E0B, #D97706);">
-                <i class="bi bi-shield-lock-fill fs-3"></i>
-            </div>
-            <div>
-                <div class="text-secondary small fw-bold">SUPER ADMINISTRATORS</div>
-                <div class="fs-4 fw-bold text-dark"><?= $superAdminCount ?></div>
+        <div class="stat-card h-100 hover-shadow border-0 shadow-sm" style="background: linear-gradient(145deg, #ffffff 0%, #f0fdf6 100%); border: 1px solid rgba(16, 185, 129, 0.16) !important;">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0 flex-grow-1">
+                    <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.6px;">Active Accounts</span>
+                    <div class="stat-value text-dark mt-1"><?= (int)$activeMembers ?></div>
+                    <div class="text-muted small mt-2 d-flex align-items-center gap-1" style="font-size: 11.5px;">
+                        <i class="bi bi-check-circle-fill text-success"></i> Authorized to login
+                    </div>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-emerald flex-shrink-0 shadow-sm mb-0">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="bb-card p-3 d-flex align-items-center gap-3">
-            <div class="rounded-3 p-3 text-white" style="background: linear-gradient(135deg, #8B5CF6, #6D28D9);">
-                <i class="bi bi-ui-checks-grid fs-3"></i>
+        <div class="stat-card h-100 hover-shadow border-0 shadow-sm" style="background: linear-gradient(145deg, #ffffff 0%, #fffcf0 100%); border: 1px solid rgba(245, 158, 11, 0.16) !important;">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0 flex-grow-1">
+                    <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.6px;">Super Admins</span>
+                    <div class="stat-value text-dark mt-1"><?= (int)$superAdminCount ?></div>
+                    <div class="text-muted small mt-2 d-flex align-items-center gap-1" style="font-size: 11.5px;">
+                        <i class="bi bi-shield-lock-fill text-warning"></i> Full Master Access
+                    </div>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-amber flex-shrink-0 shadow-sm mb-0">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
             </div>
-            <div>
-                <div class="text-secondary small fw-bold">AVAILABLE SCREENS</div>
-                <div class="fs-4 fw-bold text-dark"><?= count($allModules) ?></div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card h-100 hover-shadow border-0 shadow-sm" style="background: linear-gradient(145deg, #ffffff 0%, #f6f3ff 100%); border: 1px solid rgba(139, 92, 246, 0.16) !important;">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0 flex-grow-1">
+                    <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.6px;">Available Screens</span>
+                    <div class="stat-value text-dark mt-1"><?= count($allModules) ?></div>
+                    <div class="text-muted small mt-2 d-flex align-items-center gap-1" style="font-size: 11.5px;">
+                        <i class="bi bi-ui-checks-grid" style="color: #7C3AED;"></i> RBAC Controlled
+                    </div>
+                </div>
+                <div class="stat-icon-wrapper flex-shrink-0 shadow-sm mb-0" style="background: #F3E8FF; color: #7C3AED;">
+                    <i class="bi bi-ui-checks-grid"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -516,7 +549,7 @@ include __DIR__ . '/../../includes/header.php';
         </h5>
         <div class="text-secondary small">Define customized access, allowed screens, and Add/Update privileges per user.</div>
     </div>
-    <button type="button" class="btn btn-bb-primary btn-sm px-3 py-2 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+    <button type="button" class="btn btn-bb-primary btn-sm px-3 py-2 d-inline-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
         <i class="bi bi-person-plus-fill fs-6"></i>
         <span class="fw-semibold">Add New Team Member</span>
     </button>
@@ -528,14 +561,14 @@ include __DIR__ . '/../../includes/header.php';
         <table class="table bb-table data-table align-middle w-100">
             <thead>
                 <tr>
-                    <th width="50">#</th>
-                    <th>Member Profile</th>
+                    <th style="width: 50px; min-width: 45px;">#</th>
+                    <th style="min-width: 170px;">Member Profile</th>
                     <th style="min-width: 250px;">Account Credentials (User, Email & Pass)</th>
-                    <th>Role</th>
-                    <th>Screen Access & Privileges</th>
-                    <th>Status</th>
-                    <th>Last Active</th>
-                    <th width="150" class="text-end">Actions</th>
+                    <th style="min-width: 130px;">Role</th>
+                    <th style="min-width: 200px;">Screen Access & Privileges</th>
+                    <th style="min-width: 100px;">Status</th>
+                    <th style="min-width: 140px;">Last Active</th>
+                    <th style="width: 150px; min-width: 140px;" class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>

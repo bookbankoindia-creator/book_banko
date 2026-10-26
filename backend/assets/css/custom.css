@@ -262,27 +262,28 @@ body {
 .admin-profile-pill {
   background-color: var(--bb-light-blue-bg);
   border: 1px solid var(--bb-primary-border);
-  padding: 6px 12px 6px 8px;
+  padding: 6px 14px 6px 8px;
   border-radius: 30px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  max-width: 220px;
+  max-width: 280px;
 }
 
 .admin-profile-pill:hover {
   background-color: var(--bb-container-light-blue);
+  box-shadow: 0 4px 12px rgba(0, 97, 164, 0.12);
 }
 
 .admin-name-wrapper {
-  max-width: 130px;
+  max-width: 190px;
 }
 
 .admin-name-text {
-  max-width: 130px;
+  max-width: 190px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -884,5 +885,50 @@ body {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px -5px rgba(0, 97, 164, 0.15);
   border-color: #90CAF9 !important;
+}
+
+/* DataTables Scroll Alignment & Overflow Protection */
+.dataTables_scrollHeadInner {
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.dataTables_scrollHeadInner table {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+}
+
+/* Responsive Modal Adjustments */
+@media (max-width: 767.98px) {
+  .modal-dialog {
+    margin: 10px auto;
+    max-width: calc(100% - 20px) !important;
+  }
+  .modal-body {
+    padding: 16px 14px !important;
+  }
+  .perm-filter-tabs {
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    flex-wrap: nowrap !important;
+  }
+  .perm-filter-tabs .filter-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* Enhanced Credential Card Copy & Passwords */
+.copy-credential-btn {
+  transition: all 0.15s ease;
+}
+.copy-credential-btn:hover {
+  transform: scale(1.15);
+  color: var(--bb-primary) !important;
+}
+.cred-password-text {
+  letter-spacing: 1.5px;
+  font-size: 13px;
 }
 
