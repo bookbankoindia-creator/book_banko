@@ -183,6 +183,13 @@ function getAllAdminModules(): array {
             'group' => 'App Management',
             'actions' => ['view', 'edit']
         ],
+        'email_settings' => [
+            'name' => 'Email & SMTP Credentials',
+            'icon' => 'bi-envelope-at-fill',
+            'url' => 'modules/email_settings/index.php',
+            'group' => 'App Management',
+            'actions' => ['view', 'edit']
+        ],
     ];
 }
 

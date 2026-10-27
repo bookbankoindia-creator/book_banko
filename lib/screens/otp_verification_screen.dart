@@ -27,6 +27,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   int _resendCountdown = 30;
   Timer? _timer;
+  Timer? _confirmPollTimer;
 
   @override
   void didChangeDependencies() {
@@ -43,6 +44,60 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
     if (_timer == null) {
       _startTimer();
+    }
+    if (_confirmPollTimer == null && !_isDeleteAccount) {
+      _startConfirmPolling();
+    }
+  }
+
+  void _startConfirmPolling() {
+    _confirmPollTimer?.cancel();
+    _confirmPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted || _isVerifying || _email.isEmpty) return;
+      try {
+        final confirmed = await SupabaseAuthService.checkEmailConfirmed(_email);
+        if (confirmed && mounted) {
+          timer.cancel();
+          _onConfirmedViaLink();
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _onConfirmedViaLink() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Email confirmed via email link! Directing to registration...',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+
+    if (_isForgotPassword) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/forgot_password',
+        arguments: {'email': _email, 'verified': true, 'otp': 'verified'},
+      );
+    } else {
+      Navigator.pushReplacementNamed(
+        context,
+        '/register_details',
+        arguments: {'email': _email},
+      );
     }
   }
 
@@ -65,6 +120,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _confirmPollTimer?.cancel();
     _otpController.dispose();
     super.dispose();
   }
@@ -389,7 +445,35 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.mark_email_read_rounded, color: Color(0xFF16A34A), size: 16),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      'Tip: You can also click the link in your email to confirm!',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF15803D),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
 
                           if (_errorMessage != null) ...[
                             Container(

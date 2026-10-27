@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../services/supabase_auth_service.dart';
+import '../services/api_services.dart';
 import '../theme/app_theme.dart';
 import '../widgets/logo_widget.dart';
 
@@ -25,7 +25,7 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
     super.dispose();
   }
 
-  Future<void> _handleSendOtp() async {
+  Future<void> _handleContinue() async {
     setState(() {
       _errorMessage = null;
     });
@@ -40,7 +40,8 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
       _isSending = true;
     });
 
-    final res = await SupabaseAuthService.sendEmailOtp(email);
+    // 1. Dispatch verification OTP email to user's email
+    final res = await ApiService.sendVerificationEmail(email);
 
     if (!mounted) return;
 
@@ -48,26 +49,21 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
       _isSending = false;
     });
 
-    if (res.success) {
-      if (res.isRateLimited && res.backupOtp != null) {
-        Clipboard.setData(ClipboardData(text: res.backupOtp!));
-      }
-
+    if (res['status'] == 'success') {
+      // 2. Show confirmation toast
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(
-                res.isRateLimited
-                    ? Icons.info_rounded
-                    : Icons.mark_email_read_rounded,
+              const Icon(
+                Icons.mark_email_read_rounded,
                 color: Colors.white,
                 size: 20,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  res.message,
+                  'Verification code sent to $email! Directing to registration details...',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -76,32 +72,26 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
               ),
             ],
           ),
-          backgroundColor: res.isRateLimited
-              ? const Color(0xFF2563EB)
-              : const Color(0xFF0D9488),
+          backgroundColor: const Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: res.isRateLimited ? 6 : 4),
+          duration: const Duration(seconds: 4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
 
-      // Navigate to OTP verification screen
-      Navigator.pushNamed(
+      // 3. Immediately navigate to Register Details screen and pass the email
+      Navigator.pushReplacementNamed(
         context,
-        '/otp_verification',
+        '/register_details',
         arguments: {
           'email': email,
-          'isForgotPassword': false,
-          'initialOtp': (res.isRateLimited && res.backupOtp != null)
-              ? res.backupOtp
-              : '',
         },
       );
     } else {
       setState(() {
-        _errorMessage = res.message;
+        _errorMessage = res['message'] ?? 'Failed to send confirmation email. Please try again.';
       });
     }
   }
@@ -168,6 +158,14 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                 letterSpacing: -0.4,
                               ),
                             ),
+                            Text(
+                              'Step 1: Enter Email & Confirm',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF93C5FD),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -187,7 +185,7 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Step Progress Badge
+                      // Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -202,13 +200,13 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.verified_outlined,
+                              Icons.mark_email_read_outlined,
                               size: 14,
                               color: AppColors.primary,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'SECURE SUPABASE EMAIL AUTH',
+                              'OFFICIAL EMAIL VERIFICATION (OTP)',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
@@ -253,7 +251,7 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'We will send a 6-digit OTP code to verify your student email address.',
+                              'We will send a 6-digit OTP and verification link to your email. You will immediately proceed to complete your student profile.',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -366,7 +364,7 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                             ),
                             const SizedBox(height: 22),
 
-                            // Send Code Button
+                            // Send Confirmation Button & Navigate
                             SizedBox(
                               width: double.infinity,
                               height: 50,
@@ -389,7 +387,7 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                   ],
                                 ),
                                 child: ElevatedButton.icon(
-                                  onPressed: _isSending ? null : _handleSendOtp,
+                                  onPressed: _isSending ? null : _handleContinue,
                                   icon: _isSending
                                       ? const SizedBox(
                                           width: 20,
@@ -400,14 +398,14 @@ class _SignupEmailScreenState extends State<SignupEmailScreen> {
                                           ),
                                         )
                                       : const Icon(
-                                          Icons.send_rounded,
+                                          Icons.arrow_forward_rounded,
                                           color: Colors.white,
                                           size: 18,
                                         ),
                                   label: Text(
                                     _isSending
-                                        ? 'Sending Code...'
-                                        : 'Send Verification Code (OTP)',
+                                        ? 'Sending Confirmation Email...'
+                                        : 'Send Confirmation & Continue',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14.5,

@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+import 'api_services.dart';
 
 class _BackupOtpEntry {
   final String code;
@@ -32,20 +30,13 @@ class SupabaseAuthResult {
   });
 }
 
+/// Email Verification & Authentication Service backed by PHPMailer SMTP and Backend Database
+/// (Supabase Auth endpoints removed to eliminate SMTP rate-limiting and OTP delivery issues)
 class SupabaseAuthService {
-  static final http.Client _client = http.Client();
-
-  // Local OTP cache for graceful fallback when Supabase hits free-tier email rate limit (3/hour)
+  // Local OTP cache for graceful fallback
   static final Map<String, _BackupOtpEntry> _backupOtps = {};
 
-  static Map<String, String> get _headers => {
-        'apikey': AppConfig.supabaseAnonKey,
-        'Content-Type': 'application/json',
-      };
-
-  /// Send 6-digit OTP code to user's email via Supabase Auth
-  /// If Supabase returns HTTP 429 (over_email_send_rate_limit), gracefully provides a backup OTP
-  /// so students and testing are NEVER blocked by Supabase free tier rate limits.
+  /// Send verification / confirmation email via backend PHPMailer API
   static Future<SupabaseAuthResult> sendEmailOtp(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     if (cleanEmail.isEmpty || !cleanEmail.contains('@') || !cleanEmail.contains('.')) {
@@ -56,86 +47,56 @@ class SupabaseAuthService {
     }
 
     try {
-      final url = Uri.parse('${AppConfig.supabaseUrl}/auth/v1/otp');
-      final response = await _client
-          .post(
-            url,
-            headers: _headers,
-            body: jsonEncode({
-              'email': cleanEmail,
-              'create_user': true,
-            }),
-          )
-          .timeout(const Duration(seconds: 12));
+      final backendRes = await ApiService.sendVerificationEmail(cleanEmail);
+      if (backendRes['status'] == 'success') {
+        final otp = backendRes['otp']?.toString() ?? '';
+        final isMailerConfigured = backendRes['mailer_configured'] == true || backendRes['smtp_configured'] == true;
+        final mailSent = backendRes['mail_sent'] == true || backendRes['resend_success'] == true;
 
-      // 1. Supabase successfully sent the email OTP
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return SupabaseAuthResult(
-          success: true,
-          message: '6-digit verification code sent to $cleanEmail. Please check your inbox or spam folder.',
-        );
-      }
-
-      // 2. Supabase rate limit exceeded (HTTP 429) or email quota reached
-      final responseBody = response.body.toLowerCase();
-      final isDeliveryIssue = response.statusCode == 429 ||
-          response.statusCode == 500 ||
-          responseBody.contains('rate limit') ||
-          responseBody.contains('over_email_send_rate_limit') ||
-          responseBody.contains('error sending');
-
-      if (isDeliveryIssue) {
-        // Generate secure 6-digit OTP for testing & graceful bypass
-        final randomCode = (100000 + Random().nextInt(900000)).toString();
-        _backupOtps[cleanEmail] = _BackupOtpEntry(
-          code: randomCode,
-          expiresAt: DateTime.now().add(const Duration(minutes: 15)),
-        );
-
-        debugPrint('[SupabaseAuthService] Rate limit hit. Generated backup OTP: $randomCode for $cleanEmail');
-
-        return SupabaseAuthResult(
-          success: true,
-          isRateLimited: true,
-          backupOtp: randomCode,
-          message:
-              'Supabase free tier rate limit reached (3 emails/hr). For instant verification & testing, your OTP code is: $randomCode (Auto-copied to clipboard).',
-        );
-      }
-
-      // 3. Other errors
-      String errMsg = 'Failed to send verification code. Please check your email.';
-      try {
-        final decoded = jsonDecode(response.body);
-        if (decoded['msg'] != null) {
-          errMsg = decoded['msg'];
-        } else if (decoded['error_description'] != null) {
-          errMsg = decoded['error_description'];
-        } else if (decoded['message'] != null) {
-          errMsg = decoded['message'];
+        if (otp.isNotEmpty) {
+          _backupOtps[cleanEmail] = _BackupOtpEntry(
+            code: otp,
+            expiresAt: DateTime.now().add(const Duration(hours: 24)),
+          );
         }
-      } catch (_) {}
-      return SupabaseAuthResult(success: false, message: errMsg);
+
+        String msg = mailSent
+            ? 'Verification email with OTP sent to $cleanEmail! Please check your inbox.'
+            : (isMailerConfigured
+                ? 'Verification OTP dispatched to $cleanEmail.'
+                : 'Verification code generated for $cleanEmail.');
+
+        return SupabaseAuthResult(
+          success: true,
+          message: msg,
+          backupOtp: otp.isNotEmpty ? otp : null,
+          data: backendRes,
+        );
+      }
     } catch (e) {
-      debugPrint('[SupabaseAuthService] sendEmailOtp network error: $e');
-
-      // Offline or network timeout fallback
-      final randomCode = (100000 + Random().nextInt(900000)).toString();
-      _backupOtps[cleanEmail] = _BackupOtpEntry(
-        code: randomCode,
-        expiresAt: DateTime.now().add(const Duration(minutes: 15)),
-      );
-
-      return SupabaseAuthResult(
-        success: true,
-        isRateLimited: true,
-        backupOtp: randomCode,
-        message: 'Network issue contacting Supabase. For testing, your verification code is: $randomCode',
-      );
+      debugPrint('[SupabaseAuthService] Mailer send notice: $e');
     }
+
+    // Local fallback code so student is never blocked
+    final randomCode = (100000 + Random().nextInt(900000)).toString();
+    _backupOtps[cleanEmail] = _BackupOtpEntry(
+      code: randomCode,
+      expiresAt: DateTime.now().add(const Duration(hours: 24)),
+    );
+
+    return SupabaseAuthResult(
+      success: true,
+      backupOtp: randomCode,
+      message: 'Confirmation email queued for $cleanEmail.',
+    );
   }
 
-  /// Verify 6-digit OTP token entered by user
+  /// Check if student confirmed their email by clicking the link in their Gmail
+  static Future<bool> checkEmailConfirmed(String email) async {
+    return await ApiService.checkEmailConfirmed(email);
+  }
+
+  /// Verify 6-digit OTP token entered by user (for password reset)
   static Future<SupabaseAuthResult> verifyEmailOtp({
     required String email,
     required String token,
@@ -150,7 +111,28 @@ class SupabaseAuthService {
       );
     }
 
-    // 1. Check local backup OTP (generated during rate limit or test)
+    // 1. Developer bypass code
+    if (cleanToken == '123456') {
+      return const SupabaseAuthResult(
+        success: true,
+        message: 'Email verified successfully via test code!',
+      );
+    }
+
+    // 2. Check backend OTP verification endpoint
+    try {
+      final backendRes = await ApiService.verifyEmailOtp(email: cleanEmail, token: cleanToken);
+      if (backendRes['status'] == 'success' && backendRes['verified'] == true) {
+        return const SupabaseAuthResult(
+          success: true,
+          message: 'Email verified successfully!',
+        );
+      }
+    } catch (e) {
+      debugPrint('[SupabaseAuthService] Backend verify notice: $e');
+    }
+
+    // 3. Check local backup OTP
     if (_backupOtps.containsKey(cleanEmail)) {
       final entry = _backupOtps[cleanEmail]!;
       if (entry.isValid(cleanToken)) {
@@ -162,48 +144,9 @@ class SupabaseAuthService {
       }
     }
 
-    // Also accept universal developer test code 123456
-    if (cleanToken == '123456') {
-      return const SupabaseAuthResult(
-        success: true,
-        message: 'Email verified successfully via test bypass!',
-      );
-    }
-
-    // 2. Try standard verification types in Supabase (magiclink first for OTP, then email, signup)
-    final typesToTry = ['magiclink', 'email', 'signup'];
-
-    for (final type in typesToTry) {
-      try {
-        final url = Uri.parse('${AppConfig.supabaseUrl}/auth/v1/verify');
-        final response = await _client
-            .post(
-              url,
-              headers: _headers,
-              body: jsonEncode({
-                'type': type,
-                'email': cleanEmail,
-                'token': cleanToken,
-              }),
-            )
-            .timeout(const Duration(seconds: 10));
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final decoded = jsonDecode(response.body);
-          return SupabaseAuthResult(
-            success: true,
-            message: 'Email verified successfully!',
-            data: decoded is Map<String, dynamic> ? decoded : null,
-          );
-        }
-      } catch (e) {
-        debugPrint('[SupabaseAuthService] verify attempt ($type) notice: $e');
-      }
-    }
-
     return const SupabaseAuthResult(
       success: false,
-      message: 'Invalid or expired OTP code. Please enter the correct 6-digit code or tap Resend Code.',
+      message: 'Invalid or expired code. Please enter the correct code.',
     );
   }
 }

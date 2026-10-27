@@ -211,6 +211,11 @@ function isActiveNav(string $keyword): string {
             <i class="bi bi-sliders"></i>
             <span>App Settings</span>
         </a>
+
+        <a href="<?= url('modules/email_settings/index.php') ?>" class="nav-link-bb <?= isActiveNav('/email_settings/') ?>">
+            <i class="bi bi-envelope-at-fill text-warning"></i>
+            <span>Email & SMTP Config</span>
+        </a>
         <?php endif; ?>
         <?php endif; ?>
 

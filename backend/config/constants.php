@@ -118,6 +118,16 @@ define('SUPABASE_URL', getEnvValue('SUPABASE_URL') ?: (getEnvValue('NEXT_PUBLIC_
 define('SUPABASE_ANON_KEY', getEnvValue('SUPABASE_ANON_KEY') ?: (getEnvValue('NEXT_PUBLIC_SUPABASE_ANON_KEY') ?: base64_decode('c2JfcHVibGlzaGFibGVfRTNGbEZqcVROR3BGQlRzVkRPVzhkUV9XX1VhemRXWQ==')));
 define('SUPABASE_SERVICE_ROLE_KEY', getEnvValue('SUPABASE_SERVICE_ROLE_KEY') ?: (getEnvValue('SUPABASE_SERVICE_KEY') ?: base64_decode('c2JfcHVibGlzaGFibGVfRTNGbEZqcVROR3BGQlRzVkRPVzhkUV9XX1VhemRXWQ==')));
 
+// SMTP & PHPMailer Email Delivery Settings (Configurable in Admin Panel -> Email Settings)
+define('SMTP_HOST', getEnvValue('SMTP_HOST', 'smtp.gmail.com'));
+define('SMTP_PORT', (int) getEnvValue('SMTP_PORT', '587'));
+define('SMTP_ENCRYPTION', strtolower(getEnvValue('SMTP_ENCRYPTION', 'tls')));
+define('SMTP_USERNAME', getEnvValue('SMTP_USERNAME', ''));
+define('SMTP_PASSWORD', getEnvValue('SMTP_PASSWORD', ''));
+define('SMTP_FROM_EMAIL', getEnvValue('SMTP_FROM_EMAIL', 'bookbankoindia@gmail.com'));
+define('SMTP_FROM_NAME', getEnvValue('SMTP_FROM_NAME', 'Book Banko'));
+define('SMTP_REPLY_TO', getEnvValue('SMTP_REPLY_TO', 'bookbankoindia@gmail.com'));
+
 
 
 // Auto-detect dynamic Base URL (Supports Vercel & HTTPS Reverse Proxies)

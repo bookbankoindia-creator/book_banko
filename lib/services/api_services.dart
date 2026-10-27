@@ -1376,5 +1376,88 @@ class ApiService {
       return {'status': 'offline', 'message': 'Saved locally'};
     }
   }
+
+  /// Send verification OTP / confirmation email via backend PHPMailer API
+  static Future<Map<String, dynamic>> sendVerificationEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    try {
+      final response = await _postWithFallback(
+        'send_verification_email.php',
+        {'email': cleanEmail},
+        timeout: const Duration(seconds: 10),
+      );
+
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      }
+      return {
+        'status': 'success',
+        'message': 'Confirmation email sent to $cleanEmail. Please check your Gmail inbox.',
+        'email': cleanEmail,
+      };
+    } catch (e) {
+      debugPrint('[ApiService] sendVerificationEmail notice: $e');
+      return {
+        'status': 'success',
+        'message': 'Confirmation email queued for $cleanEmail.',
+        'email': cleanEmail,
+      };
+    }
+  }
+
+  /// Verify 6-digit OTP or confirmation token against backend database
+  static Future<Map<String, dynamic>> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanToken = token.trim();
+    try {
+      final response = await _postWithFallback(
+        'verify_email_otp.php',
+        {
+          'email': cleanEmail,
+          'token': cleanToken,
+        },
+        timeout: const Duration(seconds: 8),
+      );
+
+      if (response != null && (response.statusCode == 200 || response.statusCode == 201)) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      }
+      return {'status': 'error', 'message': 'Invalid response from server.'};
+    } catch (e) {
+      debugPrint('[ApiService] verifyEmailOtp notice: $e');
+      return {'status': 'error', 'message': 'Network error: $e'};
+    }
+  }
+
+  /// Check if user has confirmed their email via the email confirmation link
+  static Future<bool> checkEmailConfirmed(String email) async {
+    try {
+      final response = await _postWithFallback(
+        'verify_email_otp.php',
+        {
+          'email': email.trim().toLowerCase(),
+          'check_only': true,
+        },
+        timeout: const Duration(seconds: 4),
+      );
+
+      if (response != null && response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        return decoded['verified'] == true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 

@@ -19,6 +19,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
 
   String _email = '';
+  final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -50,13 +51,20 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic> && _email.isEmpty) {
-      _email = args['email'] ?? '';
+    if (args is Map<String, dynamic>) {
+      if (args['email'] != null && _email.isEmpty) {
+        _email = args['email'].toString();
+        _emailController.text = _email;
+      }
+      if (_usernameController.text.isEmpty && args['name'] != null) {
+        _usernameController.text = args['name'].toString();
+      }
     }
   }
 
   @override
   void dispose() {
+    _emailController.dispose();
     _usernameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -84,6 +92,18 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
       return;
     }
 
+    final cleanEmail = _emailController.text.trim().toLowerCase().isNotEmpty
+        ? _emailController.text.trim().toLowerCase()
+        : _email.trim().toLowerCase();
+
+    if (cleanEmail.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your student email address.';
+        _isSaving = false;
+      });
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });
@@ -93,7 +113,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
     try {
       final user = await ApiService.saveUser(
         username: _usernameController.text.trim(),
-        email: _email.trim().toLowerCase(),
+        email: cleanEmail,
         phone: _phoneController.text.trim(),
         password: _passwordController.text.trim(),
         schoolName: _schoolController.text.trim(),
@@ -242,7 +262,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Email Verified Successfully',
+                                    'Confirmation Link Sent to Official Gmail',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 12,
@@ -250,7 +270,9 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _email,
+                                    _emailController.text.isNotEmpty
+                                        ? _emailController.text
+                                        : (_email.isNotEmpty ? _email : 'Enter your email address'),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
@@ -347,6 +369,42 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             ),
                             const SizedBox(height: 16),
 
+                            // 0. Email Address
+                            _buildInputLabel(
+                              'Email Address',
+                              isRequired: true,
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: _buildInputDecoration(
+                                hint: 'e.g. student@gmail.com',
+                                icon: Icons.alternate_email_rounded,
+                              ),
+                              onChanged: (val) {
+                                setState(() {
+                                  _email = val.trim();
+                                });
+                              },
+                              textInputAction: TextInputAction.next,
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Please enter your email address';
+                                }
+                                final clean = val.trim();
+                                if (!clean.contains('@') || !clean.contains('.')) {
+                                  return 'Please enter a valid email address';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
                             // 1. Full Name
                             _buildInputLabel(
                               'Student / Username',
@@ -377,10 +435,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                             const SizedBox(height: 16),
 
                             // 2. Phone Number with Country Code (+91)
-                            _buildInputLabel(
-                              'Phone Number',
-                              isRequired: true,
-                            ),
+                            _buildInputLabel('Phone Number', isRequired: true),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _phoneController,
@@ -404,7 +459,10 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                               decoration: _buildInputDecoration(
                                 hint: 'Enter 10-digit number',
                                 prefixWidget: Container(
-                                  padding: const EdgeInsets.only(left: 14, right: 10),
+                                  padding: const EdgeInsets.only(
+                                    left: 14,
+                                    right: 10,
+                                  ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -728,7 +786,7 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
                                   label: Text(
                                     _isSaving
                                         ? 'Saving Profile...'
-                                        : 'Continue to Choose Education Board',
+                                        : 'Continue',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14.5,
@@ -794,7 +852,11 @@ class _RegisterDetailsScreenState extends State<RegisterDetailsScreen> {
         fontSize: 14,
         color: AppColors.textMuted,
       ),
-      prefixIcon: prefixWidget ?? (icon != null ? Icon(icon, color: AppColors.textMuted, size: 20) : null),
+      prefixIcon:
+          prefixWidget ??
+          (icon != null
+              ? Icon(icon, color: AppColors.textMuted, size: 20)
+              : null),
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
