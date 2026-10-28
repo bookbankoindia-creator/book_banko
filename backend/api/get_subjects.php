@@ -38,7 +38,7 @@ try {
         $whereClauses[] = "(s.board_id = :board_id OR s.board_id IS NULL)";
         $params[':board_id'] = $boardId;
     } elseif ($boardCode) {
-        $whereClauses[] = "(b.code = :board_code OR s.board_id IS NULL)";
+        $whereClauses[] = "(LOWER(TRIM(b.code)) = LOWER(TRIM(:board_code)) OR s.board_id IS NULL)";
         $params[':board_code'] = $boardCode;
     }
 
@@ -47,7 +47,7 @@ try {
         $whereClauses[] = "(s.medium_id = :medium_id OR s.medium_id IS NULL)";
         $params[':medium_id'] = $mediumId;
     } elseif ($mediumCode) {
-        $whereClauses[] = "(m.code = :medium_code OR s.medium_id IS NULL)";
+        $whereClauses[] = "(LOWER(TRIM(m.code)) = LOWER(TRIM(:medium_code)) OR s.medium_id IS NULL)";
         $params[':medium_code'] = $mediumCode;
     }
 
@@ -65,7 +65,7 @@ try {
         $whereClauses[] = "(s.stream_id = :stream_id OR s.stream_id IS NULL)";
         $params[':stream_id'] = $streamId;
     } elseif ($streamSlug) {
-        $whereClauses[] = "(str.slug = :stream_slug OR s.stream_id IS NULL)";
+        $whereClauses[] = "(LOWER(TRIM(str.slug)) = LOWER(TRIM(:stream_slug)) OR s.stream_id IS NULL)";
         $params[':stream_slug'] = $streamSlug;
     }
 
@@ -91,38 +91,7 @@ try {
     $stmt->execute($params);
     $subjects = $stmt->fetchAll();
 
-    // Fallback: If no subjects found for specific board/medium, fetch all active subjects for that standard
-    if (empty($subjects) && ($standardId || $standardNumber)) {
-        $fallbackWhere = ["s.status = 'active'"];
-        $fallbackParams = [];
-        if ($standardId) {
-            $fallbackWhere[] = "s.standard_id = :standard_id";
-            $fallbackParams[':standard_id'] = $standardId;
-        } elseif ($standardNumber) {
-            $fallbackWhere[] = "st.standard_number = :standard_num";
-            $fallbackParams[':standard_num'] = $standardNumber;
-        }
-        $fallbackSql = implode(" AND ", $fallbackWhere);
 
-        $fbQuery = "
-            SELECT s.id, s.name, s.code, s.icon, s.color_hex, s.display_order,
-                   b.id as board_id, b.code as board_code, b.name as board_name,
-                   m.id as medium_id, m.code as medium_code, m.name as medium_name,
-                   st.id as standard_id, st.standard_number, st.name as standard_name,
-                   str.id as stream_id, str.slug as stream_slug, str.name as stream_name,
-                   (SELECT COUNT(*) FROM chapters_content c WHERE c.subject_id = s.id AND c.status = 'active') as chapter_count
-            FROM subjects s
-            LEFT JOIN boards b ON s.board_id = b.id
-            LEFT JOIN mediums m ON s.medium_id = m.id
-            JOIN standards st ON s.standard_id = st.id
-            LEFT JOIN streams str ON s.stream_id = str.id
-            WHERE {$fallbackSql}
-            ORDER BY s.display_order ASC, s.name ASC
-        ";
-        $fbStmt = $db->prepare($fbQuery);
-        $fbStmt->execute($fallbackParams);
-        $subjects = $fbStmt->fetchAll();
-    }
 
     foreach ($subjects as &$sub) {
         $sub['chapter_count'] = (int)$sub['chapter_count'];

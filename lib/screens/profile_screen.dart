@@ -310,7 +310,7 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      '+91 ${user!.phone!.trim()}',
+                                      '+91 ${(user.phone ?? '').trim()}',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w600,

@@ -87,6 +87,7 @@ class HomeScreen extends StatelessWidget {
                   future: ApiService.fetchStandards(
                     boardCode: appState.selectedBoard,
                     mediumCode: appState.selectedMedium,
+                    forceRefresh: true,
                   ),
                   builder: (context, snapshot) {
                     final standards =

@@ -159,30 +159,44 @@ class BookBankoAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selectBoard(String board) {
-    _selectedBoard = board;
-    PreferenceService.saveBoard(board);
-    if (_currentUser != null) {
-      _currentUser = _currentUser!.copyWith(board: board);
-      PreferenceService.saveUserData(_currentUser!);
-    }
+  void clearActiveStandard() {
+    _myStandards.clear();
+    _activeStandardNumber = 0;
+    PreferenceService.saveActiveStandard(0);
+    PreferenceService.saveMyStandards(_myStandards);
     notifyListeners();
   }
 
+  void selectBoard(String board) {
+    if (_selectedBoard != board) {
+      _selectedBoard = board;
+      clearActiveStandard();
+      PreferenceService.saveBoard(board);
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(board: board);
+        PreferenceService.saveUserData(_currentUser!);
+      }
+      notifyListeners();
+    }
+  }
+
   void selectMedium(String mediumCode, {String? mediumName}) {
-    _selectedMedium = mediumCode;
-    if (mediumName != null && mediumName.isNotEmpty) {
-      _selectedMediumName = mediumName;
-    } else {
-      _selectedMediumName =
-          '${mediumCode.substring(0, 1).toUpperCase()}${mediumCode.substring(1)} Medium';
+    if (_selectedMedium != mediumCode) {
+      _selectedMedium = mediumCode;
+      if (mediumName != null && mediumName.isNotEmpty) {
+        _selectedMediumName = mediumName;
+      } else {
+        _selectedMediumName =
+            '${mediumCode.substring(0, 1).toUpperCase()}${mediumCode.substring(1)} Medium';
+      }
+      clearActiveStandard();
+      PreferenceService.saveMedium(_selectedMedium, _selectedMediumName);
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(medium: mediumCode);
+        PreferenceService.saveUserData(_currentUser!);
+      }
+      notifyListeners();
     }
-    PreferenceService.saveMedium(_selectedMedium, _selectedMediumName);
-    if (_currentUser != null) {
-      _currentUser = _currentUser!.copyWith(medium: mediumCode);
-      PreferenceService.saveUserData(_currentUser!);
-    }
-    notifyListeners();
   }
 
   /// Pick a single standard (e.g. from SelectStandardScreen onboarding)

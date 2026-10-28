@@ -18,12 +18,15 @@ try {
     $db = Database::getConnection();
 
     $boardCode = isset($_GET['board_code']) ? trim($_GET['board_code']) : null;
-    $boardId = isset($_GET['board_id']) ? (int)$_GET['board_id'] : null;
+    $boardId = isset($_GET['board_id']) && (int)$_GET['board_id'] > 0 ? (int)$_GET['board_id'] : null;
     $mediumCode = isset($_GET['medium_code']) ? trim($_GET['medium_code']) : null;
-    $mediumId = isset($_GET['medium_id']) ? (int)$_GET['medium_id'] : null;
+    $mediumId = isset($_GET['medium_id']) && (int)$_GET['medium_id'] > 0 ? (int)$_GET['medium_id'] : null;
 
-    if ($mediumCode && strtolower($mediumCode) === 'gujrati') {
-        $mediumCode = 'gujarati';
+    if ($mediumCode) {
+        $lower = strtolower($mediumCode);
+        if ($lower === 'gujrati' || $lower === 'guj') {
+            $mediumCode = 'gujarati';
+        }
     }
 
     $whereClauses = ["st.status = 'active'"];
@@ -33,7 +36,7 @@ try {
         $whereClauses[] = "(st.board_id = :board_id OR st.board_id IS NULL)";
         $params[':board_id'] = $boardId;
     } elseif ($boardCode) {
-        $whereClauses[] = "(b.code = :board_code OR st.board_id IS NULL)";
+        $whereClauses[] = "(LOWER(TRIM(b.code)) = LOWER(TRIM(:board_code)) OR st.board_id IS NULL)";
         $params[':board_code'] = $boardCode;
     }
 
@@ -41,7 +44,7 @@ try {
         $whereClauses[] = "(st.medium_id = :medium_id OR st.medium_id IS NULL)";
         $params[':medium_id'] = $mediumId;
     } elseif ($mediumCode) {
-        $whereClauses[] = "(m.code = :medium_code OR st.medium_id IS NULL)";
+        $whereClauses[] = "(LOWER(TRIM(m.code)) = LOWER(TRIM(:medium_code)) OR st.medium_id IS NULL)";
         $params[':medium_code'] = $mediumCode;
     }
 
@@ -59,21 +62,6 @@ try {
     ");
     $stmt->execute($params);
     $standards = $stmt->fetchAll();
-
-    // Fallback: If no standards found for this specific filter, fetch all active standards
-    if (empty($standards)) {
-        $fallbackStmt = $db->query("
-            SELECT st.id, st.board_id, st.medium_id, st.standard_number, st.name, st.requires_stream, st.display_order,
-                   b.code as board_code, b.name as board_name,
-                   m.code as medium_code, m.name as medium_name
-            FROM standards st
-            LEFT JOIN boards b ON st.board_id = b.id
-            LEFT JOIN mediums m ON st.medium_id = m.id
-            WHERE st.status = 'active'
-            ORDER BY st.display_order ASC, st.standard_number ASC
-        ");
-        $standards = $fallbackStmt->fetchAll();
-    }
 
     // Cast boolean and integer
     foreach ($standards as &$std) {

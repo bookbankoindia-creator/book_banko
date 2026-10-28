@@ -35,6 +35,7 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
     _standardsFuture = ApiService.fetchStandards(
       boardCode: appState.selectedBoard,
       mediumCode: appState.selectedMedium,
+      forceRefresh: true,
     );
   }
 
@@ -196,13 +197,32 @@ class _AiCourseStandardsScreenState extends State<AiCourseStandardsScreen> {
                     }
 
                     if (standards.isEmpty) {
-                      // Fallback standards 6 to 12
-                      standards = List.generate(
-                        7,
-                        (index) => StandardModel(
-                          number: index + 6,
-                          name: 'Standard ${index + 6}',
-                          requiresStream: index >= 5,
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.school_outlined, size: 48, color: AppColors.textMuted),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No Standards Found',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Add standards in the Admin Panel to display them here.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }

@@ -31,7 +31,7 @@ class _SelectMediumScreenState extends State<SelectMediumScreen> {
 
   void _loadMediums() {
     _cachedMediums ??= ApiService.getCachedMediums();
-    _mediumsFuture = ApiService.fetchMediums();
+    _mediumsFuture = ApiService.fetchMediums(forceRefresh: true);
   }
 
   Future<void> _refreshMediums() async {

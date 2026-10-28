@@ -34,6 +34,7 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
     _standardsFuture = ApiService.fetchStandards(
       boardCode: boardCode,
       mediumCode: mediumCode,
+      forceRefresh: true,
     );
   }
 
@@ -170,12 +171,19 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
                       );
                     }
 
-                    // Auto-select first standard if none selected
-                    if (appState.activeStandardNumber == 0 ||
-                        !standards.any((s) => s.number == appState.activeStandardNumber)) {
+                    // Auto-select first standard if none selected or clear if empty
+                    if (standards.isNotEmpty &&
+                        (appState.activeStandardNumber == 0 ||
+                         !standards.any((s) => s.number == appState.activeStandardNumber))) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted && standards.isNotEmpty) {
                           appState.setSingleStandard(standards.first.number);
+                        }
+                      });
+                    } else if (standards.isEmpty && appState.activeStandardNumber != 0) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          appState.clearActiveStandard();
                         }
                       });
                     }
@@ -211,21 +219,28 @@ class _SelectStandardScreenState extends State<SelectStandardScreen> {
                 text: 'Continue',
                 variant: ButtonVariant.gradient,
                 icon: Icons.check_circle_rounded,
-                onPressed: () async {
-                  final activeStd = appState.activeStandardNumber;
-                  if (activeStd == 11 || activeStd == 12) {
-                    Navigator.pushNamed(context, '/select_stream');
-                  } else {
-                    await appState.completeOnboarding();
-                    if (context.mounted) {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/home',
-                        (route) => false,
-                      );
-                    }
-                  }
-                },
+                onPressed: appState.activeStandardNumber <= 0
+                    ? null
+                    : () async {
+                        final activeStd = appState.activeStandardNumber;
+                        final currentStandards = _cachedStandards ?? [];
+                        final stdModel = currentStandards.firstWhere(
+                          (s) => s.number == activeStd,
+                          orElse: () => StandardModel(number: activeStd, name: 'Standard $activeStd'),
+                        );
+                        if (stdModel.requiresStream || activeStd == 11 || activeStd == 12) {
+                          Navigator.pushNamed(context, '/select_stream');
+                        } else {
+                          await appState.completeOnboarding();
+                          if (context.mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/home',
+                              (route) => false,
+                            );
+                          }
+                        }
+                      },
               ),
             ],
           ),

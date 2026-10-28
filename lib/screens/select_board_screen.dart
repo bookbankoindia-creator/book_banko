@@ -36,7 +36,7 @@ class _SelectBoardScreenState extends State<SelectBoardScreen> {
 
   void _loadBoards() {
     _cachedBoards ??= ApiService.getCachedBoards();
-    _boardsFuture = ApiService.fetchBoards();
+    _boardsFuture = ApiService.fetchBoards(forceRefresh: true);
   }
 
   Future<void> _refreshBoards() async {
