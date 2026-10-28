@@ -157,7 +157,7 @@ include __DIR__ . '/../../includes/header.php';
                         <select class="form-select" id="subject_id" name="subject_id" required>
                             <?php foreach ($subjects as $s): ?>
                                 <option value="<?= $s['id'] ?>" <?= $chapter['subject_id'] == $s['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($s['name']) ?> (<?= htmlspecialchars($s['board_code']) ?> &bull; <?= htmlspecialchars($s['standard_name']) ?>)
+                                    <?= htmlspecialchars($s['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

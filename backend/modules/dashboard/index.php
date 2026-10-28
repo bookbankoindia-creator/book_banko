@@ -304,9 +304,6 @@ include __DIR__ . '/../../includes/header.php';
                             </td>
                             <td>
                                 <div class="fw-semibold text-dark"><?= htmlspecialchars($chap['subject_name']) ?></div>
-                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 11px;">
-                                    <?= htmlspecialchars($chap['board_code']) ?> &bull; <?= htmlspecialchars($chap['standard_name']) ?>
-                                </span>
                             </td>
                             <td>
                                 <span class="badge bg-info-subtle text-info border border-info-subtle">

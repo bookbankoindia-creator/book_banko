@@ -205,12 +205,6 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
                           return SubjectTile(
                             title: subject.name,
                             icon: subject.icon,
-                            subtitle: isTextbookModule
-                                ? 'Tap to open full textbook PDF'
-                                : null,
-                            chapterCount: isTextbookModule
-                                ? null
-                                : (subject.chapterCount > 0 ? subject.chapterCount : null),
                             onTap: () => _handleSubjectTap(subject, appState),
                           );
                         },

@@ -156,7 +156,7 @@ include __DIR__ . '/../../includes/header.php';
                             <option value="">-- Choose Subject --</option>
                             <?php foreach ($subjects as $s): ?>
                                 <option value="<?= $s['id'] ?>" <?= ($preselectedSubjectId == $s['id'] || (isset($_POST['subject_id']) && $_POST['subject_id'] == $s['id'])) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($s['name']) ?> (<?= htmlspecialchars($s['board_code']) ?> &bull; <?= htmlspecialchars($s['standard_name']) ?>)
+                                    <?= htmlspecialchars($s['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

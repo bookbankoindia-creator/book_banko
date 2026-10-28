@@ -80,7 +80,7 @@ include __DIR__ . '/../../includes/header.php';
                 <option value="">All Subjects</option>
                 <?php foreach ($subjects as $sub): ?>
                     <option value="<?= $sub['id'] ?>" <?= $subjectFilter == $sub['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($sub['name']) ?> (<?= htmlspecialchars($sub['board_code']) ?> - <?= htmlspecialchars($sub['standard_name']) ?>)
+                        <?= htmlspecialchars($sub['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -158,9 +158,6 @@ include __DIR__ . '/../../includes/header.php';
                         </td>
                         <td>
                             <div class="fw-bold text-dark"><?= htmlspecialchars($chap['subject_name']) ?></div>
-                            <span class="badge bg-secondary-subtle text-secondary" style="font-size: 11px;">
-                                <?= htmlspecialchars($chap['board_code']) ?> &bull; <?= htmlspecialchars($chap['standard_name']) ?>
-                            </span>
                         </td>
                         <td>
                             <span class="badge bg-info-subtle text-info border border-info-subtle">
