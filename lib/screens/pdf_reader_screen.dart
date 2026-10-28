@@ -509,12 +509,18 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    'Chapter ${chapter.number} • $standardText',
+                    (appState.selectedModuleSlug == 'textbooks' || appState.selectedModuleSlug == 'textbook')
+                        ? (chapter.title.isNotEmpty && !chapter.title.toLowerCase().contains('chapter')
+                            ? '${chapter.title} • $standardText'
+                            : 'Textbook • $standardText')
+                        : 'Chapter ${chapter.number} • $standardText',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

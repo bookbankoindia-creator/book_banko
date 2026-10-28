@@ -94,6 +94,10 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
         ? '$board • ${appState.selectedMediumName} • $streamName'
         : '$board • ${appState.selectedMediumName}';
 
+    final isTextbookModule = appState.selectedModuleSlug == 'textbooks' ||
+        appState.selectedModuleSlug == 'textbook' ||
+        appState.selectedModuleSlug.isEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
       appBar: BookBankoAppBar(
@@ -108,7 +112,9 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Select a Subject to Read',
+                isTextbookModule
+                    ? 'Select a Subject to Open Textbook'
+                    : 'Select a Subject to Read',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -125,6 +131,10 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
 
                     if (subjects.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
                       return const ShimmerListPlaceholder(itemCount: 6);
+                    }
+
+                    if (subjects.isNotEmpty && isTextbookModule) {
+                      _preloadTextbooks(subjects);
                     }
 
                     if (subjects.isEmpty) {
@@ -195,21 +205,13 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
                           return SubjectTile(
                             title: subject.name,
                             icon: subject.icon,
-                            chapterCount: subject.chapterCount > 0 ? subject.chapterCount : null,
-                            onTap: () {
-                              appState.selectSubject(subject);
-                              // Pre-fetch chapters so ChaptersScreen opens in 0ms!
-                              final subjectDbId = subject.databaseId > 0
-                                  ? subject.databaseId
-                                  : int.tryParse(subject.id);
-                              if (subjectDbId != null && subjectDbId > 0) {
-                                ApiService.fetchChapters(
-                                  subjectId: subjectDbId,
-                                  moduleSlug: appState.selectedModuleSlug,
-                                );
-                              }
-                              Navigator.pushNamed(context, '/chapters');
-                            },
+                            subtitle: isTextbookModule
+                                ? 'Tap to open full textbook PDF'
+                                : null,
+                            chapterCount: isTextbookModule
+                                ? null
+                                : (subject.chapterCount > 0 ? subject.chapterCount : null),
+                            onTap: () => _handleSubjectTap(subject, appState),
                           );
                         },
                       ),
@@ -220,6 +222,135 @@ class _TextbooksScreenState extends State<TextbooksScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _preloadTextbooks(List<SubjectModel> subjects) {
+    for (final s in subjects) {
+      final sId = s.databaseId > 0 ? s.databaseId : int.tryParse(s.id);
+      if (sId != null && sId > 0) {
+        ApiService.fetchChapters(subjectId: sId, moduleSlug: 'textbooks');
+      }
+    }
+  }
+
+  Future<void> _handleSubjectTap(SubjectModel subject, BookBankoAppState appState) async {
+    appState.selectSubject(subject);
+    final moduleSlug = (appState.selectedModuleSlug.isNotEmpty ? appState.selectedModuleSlug : 'textbooks').toLowerCase();
+    final isTextbookModule = moduleSlug == 'textbooks' || moduleSlug == 'textbook';
+
+    final subjectDbId = subject.databaseId > 0
+        ? subject.databaseId
+        : int.tryParse(subject.id);
+
+    if (subjectDbId == null || subjectDbId <= 0) {
+      if (isTextbookModule) {
+        _showNoTextbookSnackBar(subject.name);
+      } else {
+        Navigator.pushNamed(context, '/chapters');
+      }
+      return;
+    }
+
+    if (!isTextbookModule) {
+      // For non-textbook modules (PYQs, Blueprints, etc.), continue to chapters/material list
+      ApiService.fetchChapters(
+        subjectId: subjectDbId,
+        moduleSlug: moduleSlug,
+      );
+      Navigator.pushNamed(context, '/chapters');
+      return;
+    }
+
+    // ONLY for Textbooks: Directly open the textbook PDF screen!
+    final cached = ApiService.getCachedChapters(
+      subjectId: subjectDbId,
+      moduleSlug: 'textbooks',
+    );
+
+    if (cached != null && cached.isNotEmpty) {
+      final textbook = cached.first;
+      appState.selectChapter(textbook);
+      Navigator.pushNamed(context, '/pdf_reader');
+      return;
+    }
+
+    // Show clean opening indicator if not yet in memory
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [AppShadows.subtleShadow],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Opening ${subject.name} Textbook...',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final chapters = await ApiService.fetchChapters(
+        subjectId: subjectDbId,
+        moduleSlug: 'textbooks',
+      );
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (chapters.isNotEmpty) {
+        final textbook = chapters.first;
+        appState.selectChapter(textbook);
+        Navigator.pushNamed(context, '/pdf_reader');
+      } else {
+        _showNoTextbookSnackBar(subject.name);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      _showNoTextbookSnackBar(subject.name);
+    }
+  }
+
+  void _showNoTextbookSnackBar(String subjectName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'No textbook PDF uploaded for $subjectName yet.',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
