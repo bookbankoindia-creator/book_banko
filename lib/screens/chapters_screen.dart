@@ -81,6 +81,22 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
     final subject = appState.selectedSubject;
     final subjectName = subject?.name ?? 'Subject';
     final moduleTitle = appState.selectedModuleTitle;
+    final moduleSlug = appState.selectedModuleSlug.toLowerCase();
+
+    String sectionTitle = 'Chapters & Reading Material';
+    if (moduleSlug == 'textbooks' || moduleSlug == 'textbook') {
+      sectionTitle = 'Textbooks & Study Books';
+    } else if (moduleSlug == 'blueprint') {
+      sectionTitle = 'Exam Blueprints & Paper Formats';
+    } else if (moduleSlug == 'pyqs') {
+      sectionTitle = 'Previous Year Question Papers';
+    } else if (moduleSlug == 'paper_sets') {
+      sectionTitle = 'Practice Paper Sets';
+    } else if (moduleSlug == 'mimp') {
+      sectionTitle = 'Most Important Questions & Material';
+    } else if (moduleTitle.isNotEmpty) {
+      sectionTitle = '$moduleTitle Material';
+    }
 
     return Scaffold(
       backgroundColor: AppColors.canvasBg,
@@ -96,7 +112,7 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Chapters & Reading Material',
+                sectionTitle,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -184,6 +200,68 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
                               ? '0${chapter.number}'
                               : '${chapter.number}';
 
+                          final isTextbook = moduleSlug == 'textbooks' || moduleSlug == 'textbook';
+                          final isBlueprint = moduleSlug == 'blueprint';
+                          final isPyq = moduleSlug == 'pyqs';
+                          final isPaperSet = moduleSlug == 'paper_sets';
+                          final isMimp = moduleSlug == 'mimp';
+
+                          final titleLower = chapter.title.toLowerCase();
+                          final bool hasChapterWord = titleLower.contains('chapter') || 
+                                                      titleLower.contains('ch-') || 
+                                                      titleLower.contains('ch ') ||
+                                                      titleLower.contains('ch.');
+                          final bool isFullBook = isTextbook && (!hasChapterWord || chapter.number <= 1);
+
+                          String badgeLabel;
+                          if (isTextbook) {
+                            badgeLabel = (hasChapterWord && chapter.number > 0)
+                                ? 'CHAPTER ${chapter.number}'
+                                : 'TEXTBOOK';
+                          } else if (isBlueprint) {
+                            badgeLabel = chapter.number > 1 ? 'BLUEPRINT ${chapter.number}' : 'BLUEPRINT';
+                          } else if (isPyq) {
+                            badgeLabel = chapter.number > 1 ? 'PAPER ${chapter.number}' : 'QUESTION PAPER';
+                          } else if (isPaperSet) {
+                            badgeLabel = chapter.number > 0 ? 'SET ${chapter.number}' : 'PAPER SET';
+                          } else if (isMimp) {
+                            badgeLabel = chapter.number > 0 ? 'PART ${chapter.number}' : 'M.IMP';
+                          } else {
+                            badgeLabel = (hasChapterWord || chapter.number > 0)
+                                ? 'CHAPTER ${chapter.number}'
+                                : moduleTitle.toUpperCase();
+                          }
+
+                          Widget leadingWidget;
+                          if (isFullBook) {
+                            leadingWidget = const Icon(
+                              Icons.menu_book_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            );
+                          } else if (isBlueprint) {
+                            leadingWidget = const Icon(
+                              Icons.architecture_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            );
+                          } else if (isPyq) {
+                            leadingWidget = const Icon(
+                              Icons.description_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            );
+                          } else {
+                            leadingWidget = Text(
+                              formattedNumber,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            );
+                          }
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             child: Material(
@@ -212,14 +290,7 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
                                           borderRadius: BorderRadius.circular(14),
                                         ),
                                         child: Center(
-                                          child: Text(
-                                            formattedNumber,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
+                                          child: leadingWidget,
                                         ),
                                       ),
                                       const SizedBox(width: 16),
@@ -236,7 +307,7 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
                                                   child: Text(
-                                                    'CHAPTER ${chapter.number}',
+                                                    badgeLabel,
                                                     style: GoogleFonts.plusJakartaSans(
                                                       fontSize: 10,
                                                       fontWeight: FontWeight.w800,

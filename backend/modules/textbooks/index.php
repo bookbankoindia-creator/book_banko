@@ -9,8 +9,8 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 requireLogin();
 
-$pageTitle = 'Textbook Chapters';
-$pageSubtitle = 'Upload and manage textbook chapters, PDFs, and page-wise JEE/NEET question links';
+$pageTitle = 'Textbooks & Study Books';
+$pageSubtitle = 'Upload and manage full textbooks, chapters, PDFs, and page-wise JEE/NEET question links';
 $db = Database::getConnection();
 
 $textbookModule = $db->query("SELECT id, title, slug FROM dashboard_modules WHERE slug = 'textbooks' LIMIT 1")->fetch();
@@ -103,14 +103,14 @@ include __DIR__ . '/../../includes/header.php';
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-book-half text-primary me-2"></i>Textbook Chapters (<?= count($chapters) ?>)
+            <i class="bi bi-book-half text-primary me-2"></i>Textbooks & Materials (<?= count($chapters) ?>)
         </h5>
-        <p class="text-muted small mb-0">Contains textbook PDFs with page-by-page JEE & NEET question links</p>
+        <p class="text-muted small mb-0">Contains full textbook PDFs and chapters with page-by-page JEE & NEET question links</p>
     </div>
     <?php if (hasPermission('textbooks', 'add')): ?>
     <a href="<?= url('modules/chapters/add.php?module_id=' . $textbookModuleId . ($subjectFilter ? '&subject_id=' . $subjectFilter : '')) ?>" class="btn btn-bb-primary btn-sm d-inline-flex align-items-center gap-2">
         <i class="bi bi-cloud-arrow-up-fill"></i>
-        <span>Upload New Textbook Chapter</span>
+        <span>Upload Textbook / Book PDF</span>
     </a>
     <?php endif; ?>
 </div>
@@ -120,8 +120,8 @@ include __DIR__ . '/../../includes/header.php';
         <table class="table bb-table data-table align-middle w-100">
             <thead>
                 <tr>
-                    <th width="60">Ch #</th>
-                    <th>Chapter Title</th>
+                    <th width="70">Type / #</th>
+                    <th>Textbook / Document Title</th>
                     <th>Subject & Standard</th>
                     <th>Pages / Size</th>
                     <th>JEE & NEET Links</th>
@@ -135,14 +135,21 @@ include __DIR__ . '/../../includes/header.php';
                     <tr>
                         <td colspan="8" class="text-center py-4 text-muted">
                             <i class="bi bi-book fs-2 d-block mb-2 text-muted"></i>
-                            No textbook chapters found. Click <strong>Upload New Textbook Chapter</strong> to add one.
+                            No textbooks found. Click <strong>Upload Textbook / Book PDF</strong> to add one.
                         </td>
                     </tr>
                 <?php endif; ?>
                 <?php foreach ($chapters as $ch): ?>
                     <tr>
                         <td>
-                            <span class="badge bg-light text-secondary border">Ch <?= $ch['chapter_number'] ?></span>
+                            <?php 
+                            $tLower = strtolower($ch['title']);
+                            $isBook = ($ch['chapter_number'] <= 1 && (stripos($tLower, 'book') !== false || stripos($tLower, 'textbook') !== false || stripos($tLower, 'chapter') === false));
+                            if ($isBook): ?>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-book me-1"></i>Book</span>
+                            <?php else: ?>
+                                <span class="badge bg-light text-secondary border">Ch <?= $ch['chapter_number'] ?></span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <div class="fw-bold text-dark fs-6"><?= htmlspecialchars($ch['title']) ?></div>

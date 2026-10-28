@@ -188,7 +188,7 @@ function sendMailViaPHPMailer(
         $mail->Host       = $config['host'];
         $mail->SMTPAuth   = true;
         $mail->Username   = $config['username'];
-        $mail->Password   = $config['password'];
+        $mail->Password   = (stripos($config['host'] ?? '', 'gmail') !== false) ? str_replace(' ', '', $config['password']) : $config['password'];
         $mail->Port       = $config['port'];
 
         // Encryption

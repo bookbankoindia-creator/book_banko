@@ -53,13 +53,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? 'save_settings';
 
         if ($action === 'save_settings') {
+            $smtpHost = trim($_POST['smtp_host'] ?? 'smtp.gmail.com');
+            $rawPassword = trim($_POST['smtp_password'] ?? '');
+            if (stripos($smtpHost, 'gmail') !== false) {
+                $rawPassword = str_replace(' ', '', $rawPassword);
+            }
+
             $settingsToSave = [
                 'smtp_enabled'    => isset($_POST['smtp_enabled']) ? '1' : '0',
-                'smtp_host'       => trim($_POST['smtp_host'] ?? 'smtp.gmail.com'),
+                'smtp_host'       => $smtpHost,
                 'smtp_port'       => (string)max(1, (int)($_POST['smtp_port'] ?? 587)),
                 'smtp_encryption' => strtolower(trim($_POST['smtp_encryption'] ?? 'tls')),
                 'smtp_username'   => trim($_POST['smtp_username'] ?? ''),
-                'smtp_password'   => trim($_POST['smtp_password'] ?? ''),
+                'smtp_password'   => $rawPassword,
                 'smtp_from_email' => trim($_POST['smtp_from_email'] ?? ''),
                 'smtp_from_name'  => trim($_POST['smtp_from_name'] ?? 'Book Banko'),
                 'smtp_reply_to'   => trim($_POST['smtp_reply_to'] ?? ''),
@@ -92,12 +98,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($testRecipient) || !filter_var($testRecipient, FILTER_VALIDATE_EMAIL)) {
                 flash('error', 'Please enter a valid recipient email address to test SMTP delivery.');
             } else {
+                $testHost = trim($_POST['smtp_host'] ?? $current['smtp_host']);
+                $testPass = trim($_POST['smtp_password'] ?? $current['smtp_password']);
+                if (stripos($testHost, 'gmail') !== false) {
+                    $testPass = str_replace(' ', '', $testPass);
+                }
+
                 $testConfig = [
-                    'host'       => trim($_POST['smtp_host'] ?? $current['smtp_host']),
+                    'host'       => $testHost,
                     'port'       => (int)($_POST['smtp_port'] ?? $current['smtp_port']),
                     'encryption' => trim($_POST['smtp_encryption'] ?? $current['smtp_encryption']),
                     'username'   => trim($_POST['smtp_username'] ?? $current['smtp_username']),
-                    'password'   => trim($_POST['smtp_password'] ?? $current['smtp_password']),
+                    'password'   => $testPass,
                     'from_email' => trim($_POST['smtp_from_email'] ?? $current['smtp_from_email']),
                     'from_name'  => trim($_POST['smtp_from_name'] ?? $current['smtp_from_name']),
                     'reply_to'   => trim($_POST['smtp_reply_to'] ?? $current['smtp_reply_to']),
@@ -239,7 +251,7 @@ include __DIR__ . '/../../includes/header.php';
                         <div class="col-md-6">
                             <label class="form-label fw-semibold d-flex justify-content-between" for="smtp_password">
                                 <span>SMTP Password / App Password <span class="text-danger">*</span></span>
-                                <a href="#gmailHelpAccordion" class="text-decoration-none small text-primary" data-bs-toggle="collapse">How to get App Password?</a>
+                                <a href="#gmailGuide" class="text-decoration-none small text-primary" data-bs-toggle="collapse">How to get App Password?</a>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="bi bi-key-fill"></i></span>
