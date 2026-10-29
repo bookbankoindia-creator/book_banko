@@ -280,6 +280,55 @@ class ChapterModel {
     );
   }
 
+  /// Returns the start page number configured in Admin Panel (e.g., 4, 5, 6... onwards)
+  int getStartPage([int fallback = 4]) {
+    if (pageLinks == null) return fallback;
+
+    if (pageLinks is Map) {
+      final map = pageLinks as Map;
+      if (map['start_page'] != null) {
+        final sp = int.tryParse(map['start_page'].toString());
+        if (sp != null && sp >= 1) return sp;
+      }
+      final numKeys = map.keys
+          .map((k) => int.tryParse(k.toString()))
+          .whereType<int>()
+          .toList();
+      if (numKeys.isNotEmpty) {
+        numKeys.sort();
+        return numKeys.first;
+      }
+    } else if (pageLinks is String && pageLinks.toString().trim().isNotEmpty) {
+      final str = pageLinks.toString().trim();
+      if (str.startsWith('{') && str.endsWith('}')) {
+        try {
+          final decoded = jsonDecode(str);
+          if (decoded is Map) {
+            if (decoded['start_page'] != null) {
+              final sp = int.tryParse(decoded['start_page'].toString());
+              if (sp != null && sp >= 1) return sp;
+            }
+            final numKeys = decoded.keys
+                .map((k) => int.tryParse(k.toString()))
+                .whereType<int>()
+                .toList();
+            if (numKeys.isNotEmpty) {
+              numKeys.sort();
+              return numKeys.first;
+            }
+          }
+        } catch (_) {}
+
+        final match = RegExp(r'"start_page"\s*:\s*"?(\d+)"?').firstMatch(str);
+        if (match != null && match.group(1) != null) {
+          final sp = int.tryParse(match.group(1)!);
+          if (sp != null && sp >= 1) return sp;
+        }
+      }
+    }
+    return fallback;
+  }
+
   String? getLinkForPage(int pageNumber) {
     if (pageLinks == null) return null;
     final key = pageNumber.toString();
@@ -295,6 +344,18 @@ class ChapterModel {
           map[pageNumber] != null &&
           map[pageNumber].toString().trim().isNotEmpty) {
         return map[pageNumber].toString().trim();
+      }
+
+      final startVal = map['start_page'];
+      if (startVal != null) {
+        final startPage = int.tryParse(startVal.toString());
+        if (startPage != null && pageNumber >= startPage) {
+          if (map.containsKey('default') &&
+              map['default'] != null &&
+              map['default'].toString().trim().isNotEmpty) {
+            return map['default'].toString().trim();
+          }
+        }
       }
     } else if (pageLinks is String && pageLinks.toString().trim().isNotEmpty) {
       final str = pageLinks.toString().trim();
@@ -312,6 +373,18 @@ class ChapterModel {
                 decoded[pageNumber].toString().trim().isNotEmpty) {
               return decoded[pageNumber].toString().trim();
             }
+
+            final startVal = decoded['start_page'];
+            if (startVal != null) {
+              final startPage = int.tryParse(startVal.toString());
+              if (startPage != null && pageNumber >= startPage) {
+                if (decoded.containsKey('default') &&
+                    decoded['default'] != null &&
+                    decoded['default'].toString().trim().isNotEmpty) {
+                  return decoded['default'].toString().trim();
+                }
+              }
+            }
           }
         } catch (_) {}
 
@@ -319,11 +392,6 @@ class ChapterModel {
         final match = RegExp(keyPattern).firstMatch(str);
         if (match != null && match.group(1) != null) {
           return match.group(1);
-        }
-      } else if (str.startsWith('http://') || str.startsWith('https://')) {
-        // If single URL is provided without page keys, only show on page 1
-        if (pageNumber == 1) {
-          return str;
         }
       }
     }

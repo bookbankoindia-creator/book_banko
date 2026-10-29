@@ -46,6 +46,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pageCount = (int)($_POST['page_count'] ?? 1);
         $externalUrl = trim($_POST['pdf_external_url'] ?? '');
         $pageLinks = trim($_POST['page_links'] ?? '');
+        $startPageNum = isset($_POST['start_page_num']) && trim($_POST['start_page_num']) !== '' ? max(1, (int)$_POST['start_page_num']) : null;
+
+        if (!empty($pageLinks) && str_starts_with($pageLinks, '{') && str_ends_with($pageLinks, '}')) {
+            $linksArr = json_decode($pageLinks, true);
+            if (is_array($linksArr)) {
+                $cleanLinks = [];
+                if ($startPageNum !== null) {
+                    $cleanLinks['start_page'] = $startPageNum;
+                } elseif (!empty($linksArr['start_page'])) {
+                    $cleanLinks['start_page'] = (int)$linksArr['start_page'];
+                }
+                foreach ($linksArr as $pNum => $pUrl) {
+                    if (is_numeric($pNum) && !empty(trim((string)$pUrl))) {
+                        $cleanLinks[(int)$pNum] = trim((string)$pUrl);
+                    }
+                }
+                $pageLinks = !empty($cleanLinks) ? json_encode($cleanLinks, JSON_UNESCAPED_SLASHES) : '';
+            } else {
+                $pageLinks = '';
+            }
+        } elseif ($startPageNum !== null) {
+            $pageLinks = json_encode(['start_page' => $startPageNum], JSON_UNESCAPED_SLASHES);
+        } else {
+            $pageLinks = '';
+        }
+
         $displayOrder = (int)($_POST['display_order'] ?? ($chapterNumber > 0 ? $chapterNumber : 1));
         $status = $_POST['status'] ?? 'active';
 
@@ -134,6 +160,30 @@ $modules = $db->query("SELECT id, title, slug FROM dashboard_modules WHERE statu
 $titleLower = strtolower($chapter['title']);
 $isExistingFullBook = ($chapter['module_id'] == 1 || $chapter['module_id'] === null) && 
     (stripos($titleLower, 'book') !== false || stripos($titleLower, 'textbook') !== false || (int)$chapter['chapter_number'] <= 1 && stripos($titleLower, 'chapter') === false);
+
+// Parse existing page_links for server-side pre-rendering
+$savedStartPage = 4;
+$savedRows = [];
+if (!empty($chapter['page_links'])) {
+    $rawLinks = trim($chapter['page_links']);
+    if (str_starts_with($rawLinks, '{') && str_ends_with($rawLinks, '}')) {
+        $decoded = json_decode($rawLinks, true);
+        if (is_array($decoded)) {
+            if (!empty($decoded['start_page']) && is_numeric($decoded['start_page'])) {
+                $savedStartPage = max(1, (int)$decoded['start_page']);
+            }
+            foreach ($decoded as $k => $v) {
+                if (is_numeric($k) && !empty($v)) {
+                    $savedRows[(int)$k] = (string)$v;
+                }
+            }
+            if (empty($decoded['start_page']) && !empty($savedRows)) {
+                $savedStartPage = (int)min(array_keys($savedRows));
+            }
+            ksort($savedRows);
+        }
+    }
+}
 
 include __DIR__ . '/../../includes/header.php';
 ?>
@@ -272,42 +322,26 @@ include __DIR__ . '/../../includes/header.php';
 
                     <div class="col-12">
                         <div class="card border rounded-3 p-3 bg-light">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-primary">
+                                    <h6 class="fw-bold mb-1 text-primary">
                                         <i class="bi bi-link-45deg me-1"></i>Page-Wise JEE & NEET Question Links
                                     </h6>
-                                    <small class="text-muted">Set specific question doc/quiz URLs for Page 4 and all pages after (4, 5, 6, 7...).</small>
+                                    <small class="text-muted" id="quick_fill_desc">
+                                        Set specific question doc/quiz URLs for Page <span id="dyn_desc_start_page" class="fw-bold text-dark"><?= $savedStartPage ?></span> and all pages after (<span id="dyn_desc_examples" class="text-muted"><?= $savedStartPage ?>, <?= $savedStartPage + 1 ?>, <?= $savedStartPage + 2 ?>...</span>).
+                                    </small>
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="input-group input-group-sm" style="width: 150px;" title="Set starting page number">
+                                        <span class="input-group-text bg-white text-muted fw-bold">Start Pg</span>
+                                        <input type="number" min="1" max="1000" class="form-control form-control-sm fw-bold text-primary text-center" id="start_page_num" name="start_page_num" value="<?= $savedStartPage ?>" placeholder="e.g. 4" oninput="handleStartPageChange()">
+                                    </div>
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPageRow()">
                                         <i class="bi bi-plus-circle me-1"></i>Add Page Link
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickFillPage4Onwards()">
-                                        <i class="bi bi-magic me-1"></i>Quick Fill Page 4+
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_quick_fill" onclick="quickFillFromStartPage()">
+                                        <i class="bi bi-magic me-1"></i><span id="quick_fill_btn_text">Quick Fill Page <?= $savedStartPage ?>+</span>
                                     </button>
-                                </div>
-                            </div>
-
-                            <!-- Container Link Text (Customizable text displayed on container) -->
-                            <div class="row g-2 mb-2 align-items-center bg-white p-2 rounded border">
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold mb-0 text-dark">Container Display Text:</label>
-                                    <small class="text-muted d-block" style="font-size: 11px;">Custom text on the clickable container (Page 4+)</small>
-                                </div>
-                                <div class="col-md-8">
-                                    <input type="text" class="form-control form-control-sm" id="custom_link_text" placeholder="👉 Click here for the best JEE & NEET Questions ↗" oninput="syncPageLinksJson()">
-                                </div>
-                            </div>
-
-                            <!-- Global/Default Link (Optional fallback) -->
-                            <div class="row g-2 mb-3 align-items-center bg-white p-2 rounded border">
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold mb-0 text-dark">Default Link for Page 4 Onwards:</label>
-                                    <small class="text-muted d-block" style="font-size: 11px;">Fallback if a page does not have a custom link</small>
-                                </div>
-                                <div class="col-md-8">
-                                    <input type="url" class="form-control form-control-sm" id="default_page_link" placeholder="https://docs.google.com/document/d/..." oninput="syncPageLinksJson()">
                                 </div>
                             </div>
 
@@ -322,12 +356,31 @@ include __DIR__ . '/../../includes/header.php';
                                         </tr>
                                     </thead>
                                     <tbody id="page_links_rows">
-                                        <!-- Dynamic Rows -->
+                                        <?php if (!empty($savedRows)): ?>
+                                            <?php foreach ($savedRows as $pNum => $pUrl): ?>
+                                                <tr class="page-link-row">
+                                                    <td>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-muted">Pg</span>
+                                                            <input type="number" min="1" class="form-control form-control-sm row-page-num fw-bold text-primary" value="<?= (int)$pNum ?>" placeholder="e.g. <?= (int)$pNum ?>" oninput="syncPageLinksJson()">
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <input type="url" class="form-control form-control-sm row-page-url font-monospace small" value="<?= htmlspecialchars($pUrl) ?>" placeholder="https://docs.google.com/document/d/..." oninput="syncPageLinksJson()">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="removePageRow(this)" title="Delete Row">
+                                                            <i class="bi bi-trash3"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
-                            <div id="no_custom_links_msg" class="text-center py-2 text-muted small">
-                                No specific page links added yet. Click <strong>+ Add Page Link</strong> or <strong>Quick Fill Page 4+</strong>.
+                            <div id="no_custom_links_msg" class="text-center py-3 text-muted small" style="<?= !empty($savedRows) ? 'display:none;' : '' ?>">
+                                <i class="bi bi-info-circle me-1"></i>No page links added yet. Click <strong>+ Add Page Link</strong> above to add a link for a specific page.
                             </div>
 
                             <!-- Hidden field that stores the JSON string for backend processing -->
@@ -395,33 +448,58 @@ function removePageRow(btn) {
     syncPageLinksJson();
 }
 
-function quickFillPage4Onwards() {
-    const totalPagesInput = document.getElementById('page_count');
-    const totalPages = parseInt(totalPagesInput?.value || '10', 10);
-    const defaultUrl = document.getElementById('default_page_link').value.trim();
+function handleStartPageChange() {
+    const input = document.getElementById('start_page_num');
+    const val = parseInt(input?.value || '4', 10);
+    const startPage = (!isNaN(val) && val >= 1) ? val : 4;
 
-    const endPage = Math.min(Math.max(totalPages, 4), 30);
-    for (let p = 4; p <= endPage; p++) {
-        const existing = Array.from(document.querySelectorAll('.row-page-num')).some(input => input.value == p);
+    const btnText = document.getElementById('quick_fill_btn_text');
+    if (btnText) {
+        btnText.textContent = `Quick Fill Page ${startPage}+`;
+    }
+    const descStart = document.getElementById('dyn_desc_start_page');
+    if (descStart) {
+        descStart.textContent = startPage;
+    }
+    const descExamples = document.getElementById('dyn_desc_examples');
+    if (descExamples) {
+        descExamples.textContent = `${startPage}, ${startPage + 1}, ${startPage + 2}...`;
+    }
+    syncPageLinksJson();
+}
+
+function quickFillFromStartPage() {
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    const totalPages = parseInt(totalPagesInput?.value || '10', 10);
+    const startPageInput = document.getElementById('start_page_num');
+    const startPage = Math.max(1, parseInt(startPageInput?.value || '4', 10));
+
+    // If an existing row has a URL, use it as template URL
+    let templateDailyUrl = '';
+    const existingUrlInputs = document.querySelectorAll('.row-page-url');
+    for (const inp of existingUrlInputs) {
+        if (inp.value && inp.value.trim().length > 0) {
+            templateDailyUrl = inp.value.trim();
+            break;
+        }
+    }
+
+    const endPage = Math.min(Math.max(totalPages, startPage), startPage + 25);
+    for (let p = startPage; p <= endPage; p++) {
+        const existing = Array.from(document.querySelectorAll('.row-page-num')).some(input => parseInt(input.value, 10) === p);
         if (!existing) {
-            addPageRow(p, defaultUrl);
+            addPageRow(p, templateDailyUrl);
         }
     }
 }
 
 function syncPageLinksJson() {
-    const defaultUrl = document.getElementById('default_page_link').value.trim();
-    const customText = document.getElementById('custom_link_text').value.trim();
+    const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '4', 10);
+    const startPage = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 4;
     const rows = document.querySelectorAll('.page-link-row');
     const mapping = {};
 
-    if (customText) {
-        mapping['link_text'] = customText;
-    }
-
-    if (defaultUrl) {
-        mapping['default'] = defaultUrl;
-    }
+    mapping['start_page'] = startPage;
 
     rows.forEach(tr => {
         const pageNum = tr.querySelector('.row-page-num').value.trim();
@@ -606,22 +684,25 @@ function handleModuleChanged() {
 document.addEventListener('DOMContentLoaded', () => {
     updateDynamicFields();
 
+    const existingRows = document.querySelectorAll('.page-link-row');
     const initialVal = document.getElementById('page_links').value.trim();
-    if (initialVal) {
+    if (initialVal && initialVal.startsWith('{') && initialVal.endsWith('}')) {
         try {
-            if (initialVal.startsWith('{') && initialVal.endsWith('}')) {
-                const parsed = JSON.parse(initialVal);
+            const parsed = JSON.parse(initialVal);
+            if (parsed.start_page) {
+                const sVal = parseInt(parsed.start_page, 10);
+                if (!isNaN(sVal) && sVal >= 1) {
+                    const input = document.getElementById('start_page_num');
+                    if (input) input.value = sVal;
+                    handleStartPageChange();
+                }
+            }
+            if (existingRows.length === 0) {
                 for (const [key, val] of Object.entries(parsed)) {
-                    if (key === 'link_text' || key === 'button_text') {
-                        document.getElementById('custom_link_text').value = val;
-                    } else if (key === 'default') {
-                        document.getElementById('default_page_link').value = val;
-                    } else if (key && val) {
+                    if (key && val && !isNaN(parseInt(key, 10))) {
                         addPageRow(key, val);
                     }
                 }
-            } else if (initialVal.startsWith('http://') || initialVal.startsWith('https://')) {
-                document.getElementById('default_page_link').value = initialVal;
             }
         } catch (e) {
             console.error('Error parsing initial page_links:', e);

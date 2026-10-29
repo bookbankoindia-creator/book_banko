@@ -174,14 +174,15 @@ include __DIR__ . '/../../includes/header.php';
                             $hasPageLinks = !empty($ch['page_links']) && trim($ch['page_links']) !== '{}' && trim($ch['page_links']) !== '[]';
                             if ($hasPageLinks): 
                                 $linksArray = json_decode($ch['page_links'], true);
-                                $customCount = is_array($linksArray) ? count($linksArray) : 0;
+                                $customPages = is_array($linksArray) ? count(array_filter(array_keys($linksArray), fn($k) => is_numeric($k))) : 0;
+                                $startPage = (is_array($linksArray) && !empty($linksArray['start_page'])) ? (int)$linksArray['start_page'] : 4;
                             ?>
                                 <span class="badge bg-success-subtle text-success border border-success-subtle" title="<?= htmlspecialchars($ch['page_links']) ?>">
-                                    <i class="bi bi-link-45deg me-1"></i><?= $customCount > 0 ? $customCount . ' Custom Pages' : 'Page 4+ Active' ?>
+                                    <i class="bi bi-link-45deg me-1"></i>From Pg <?= $startPage ?>+ (<?= $customPages > 0 ? $customPages . ' custom' : 'Default' ?>)
                                 </span>
                             <?php else: ?>
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                                    <i class="bi bi-stars me-1"></i>Default Page 4+
+                                    <i class="bi bi-stars me-1"></i>Default Settings
                                 </span>
                             <?php endif; ?>
                         </td>

@@ -219,9 +219,9 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
                 <div class="row g-3">
                     <div class="col-md-12">
-                        <label class="form-label" for="default_jee_neet_text">Default Container Text (Page 4+ in Textbooks)</label>
+                        <label class="form-label" for="default_jee_neet_text">Default JEE & NEET Container Text (Textbooks)</label>
                         <input type="text" class="form-control" id="default_jee_neet_text" name="default_jee_neet_text" value="<?= htmlspecialchars($current['default_jee_neet_text'] ?? '👉 Click here for the best JEE & NEET Questions ↗') ?>" placeholder="👉 Click here for the best JEE & NEET Questions ↗">
-                        <small class="text-muted">Global default text shown on the clickable bottom container for textbook PDFs from Page 4 onwards. Can also be overridden per individual chapter in the Chapter Editor.</small>
+                        <small class="text-muted">Global default text shown on the clickable bottom container for textbook PDFs. Can also be overridden per individual chapter in the Chapter Editor.</small>
                     </div>
                 </div>
             </div>
@@ -243,7 +243,7 @@ include __DIR__ . '/../../includes/header.php';
                             Enable In-House Custom Ad on JEE & NEET Button
                         </label>
                     </div>
-                    <small class="text-muted ms-1">When students tap "Click here for the best JEE & NEET Questions" on Page 4+ of textbook PDFs, this customized promotional ad appears.</small>
+                    <small class="text-muted ms-1">When students tap "Click here for the best JEE & NEET Questions" in textbook PDFs, this customized promotional ad appears.</small>
                 </div>
 
                 <div class="row g-4 p-3">

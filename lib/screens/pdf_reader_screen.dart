@@ -203,7 +203,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           'https://docs.google.com/document/d/1KpHDVKmK_OJhktZPq0wOphWFlPFUJE2jIIJCiC_Fz30/edit?tab=t.0';
 
       // Only enable JEE & NEET question links for the "Textbooks" section
-      final isTextbookSection = (chapter.moduleSlug == null ||
+      final isTextbookSection =
+          (chapter.moduleSlug == null ||
               chapter.moduleSlug == 'textbooks' ||
               chapter.moduleSlug == 'textbook') &&
           (appState?.selectedModuleSlug == 'textbooks' ||
@@ -246,11 +247,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           page.graphics.restore(gState);
         } catch (_) {}
 
-        // 2. JEE & NEET Question Link: ONLY show in Textbooks section from Page 4 onwards (4, 5, 6... last page)
-        // (Do NOT show on Pages 1 to 3, and do NOT show on any other PDF section like solutions, extra materials, competitive exams, etc.)
-        if (isTextbookSection && pageNumber >= 4) {
-          final configuredUrl = chapter.getLinkForPage(pageNumber);
-          final targetPageUrl = configuredUrl ?? defaultUrl;
+        // 2. JEE & NEET Question Link: ONLY show on pages that have a specific page link configured in Admin Panel
+        final pageLinkUrl = chapter.getLinkForPage(pageNumber);
+        if (isTextbookSection && pageLinkUrl != null && pageLinkUrl.trim().isNotEmpty) {
+          final targetPageUrl = pageLinkUrl.trim();
 
           if (targetPageUrl.trim().isNotEmpty) {
             try {
@@ -269,7 +269,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               // 1. Draw modern, stylish container background (soft light blue fill)
               page.graphics.drawRectangle(
                 brush: sf_pdf.PdfSolidBrush(
-                  sf_pdf.PdfColor(239, 246, 255), // #EFF6FF soft blue background
+                  sf_pdf.PdfColor(
+                    239,
+                    246,
+                    255,
+                  ), // #EFF6FF soft blue background
                 ),
                 bounds: containerRect,
               );
@@ -336,9 +340,14 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     }
   }
 
-  Future<void> _loadPdf(String url, [ChapterModel? chapter, BookBankoAppState? appState]) async {
+  Future<void> _loadPdf(
+    String url, [
+    ChapterModel? chapter,
+    BookBankoAppState? appState,
+  ]) async {
     final activeChapter = chapter ?? ChapterModel.mathChapters[0];
-    final cacheKey = '${activeChapter.title}_${activeChapter.pdfUrl}_${appState?.selectedModuleSlug ?? ''}';
+    final cacheKey =
+        '${activeChapter.title}_${activeChapter.pdfUrl}_${activeChapter.pageLinks ?? ''}_${appState?.selectedModuleSlug ?? ''}';
 
     // 0ms Instant Load if this chapter PDF was already processed & cached!
     if (_enhancedPdfCache.containsKey(cacheKey)) {
@@ -489,7 +498,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               elevation: 0,
               centerTitle: false,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               title: Column(
@@ -509,10 +522,14 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    (appState.selectedModuleSlug == 'textbooks' || appState.selectedModuleSlug == 'textbook')
-                        ? (chapter.title.isNotEmpty && !chapter.title.toLowerCase().contains('chapter')
-                            ? '${chapter.title} • $standardText'
-                            : 'Textbook • $standardText')
+                    (appState.selectedModuleSlug == 'textbooks' ||
+                            appState.selectedModuleSlug == 'textbook')
+                        ? (chapter.title.isNotEmpty &&
+                                  !chapter.title.toLowerCase().contains(
+                                    'chapter',
+                                  )
+                              ? '${chapter.title} • $standardText'
+                              : 'Textbook • $standardText')
                         : 'Chapter ${chapter.number} • $standardText',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.85),
@@ -527,7 +544,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               actions: [
                 // Eye-Comfort Reading Mode Toggle
                 PopupMenuButton<ReadingMode>(
-                  icon: const Icon(Icons.palette_outlined, color: Colors.white, size: 22),
+                  icon: const Icon(
+                    Icons.palette_outlined,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                   tooltip: 'Reading Mode',
                   onSelected: (mode) {
                     setState(() {
@@ -539,7 +560,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                       value: ReadingMode.light,
                       child: Row(
                         children: [
-                          Icon(Icons.wb_sunny_rounded, color: _readingMode == ReadingMode.light ? AppColors.primaryBlue : Colors.grey),
+                          Icon(
+                            Icons.wb_sunny_rounded,
+                            color: _readingMode == ReadingMode.light
+                                ? AppColors.primaryBlue
+                                : Colors.grey,
+                          ),
                           const SizedBox(width: 10),
                           const Text('Light Mode'),
                         ],
@@ -549,7 +575,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                       value: ReadingMode.sepia,
                       child: Row(
                         children: [
-                          Icon(Icons.menu_book_rounded, color: _readingMode == ReadingMode.sepia ? Colors.amber[800] : Colors.grey),
+                          Icon(
+                            Icons.menu_book_rounded,
+                            color: _readingMode == ReadingMode.sepia
+                                ? Colors.amber[800]
+                                : Colors.grey,
+                          ),
                           const SizedBox(width: 10),
                           const Text('Sepia (Eye Comfort)'),
                         ],
@@ -559,7 +590,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                       value: ReadingMode.dark,
                       child: Row(
                         children: [
-                          Icon(Icons.dark_mode_rounded, color: _readingMode == ReadingMode.dark ? Colors.indigo : Colors.grey),
+                          Icon(
+                            Icons.dark_mode_rounded,
+                            color: _readingMode == ReadingMode.dark
+                                ? Colors.indigo
+                                : Colors.grey,
+                          ),
                           const SizedBox(width: 10),
                           const Text('Dark Mode'),
                         ],
@@ -569,7 +605,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 ),
                 // Fullscreen toggle
                 IconButton(
-                  icon: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 24),
+                  icon: const Icon(
+                    Icons.fullscreen_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                   tooltip: 'Fullscreen Reading',
                   onPressed: () {
                     setState(() {
@@ -791,125 +831,76 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Row 1: Interactive Page Slider when document has multiple pages
-            if (_totalPages > 1)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            // Left: Page Count Indicator (tap to jump)
+            InkWell(
+              onTap: _showJumpToPageDialog,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '1',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.bold,
+                      '$_currentPage / ${_totalPages > 0 ? _totalPages : 1}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
                       ),
                     ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: AppColors.accentAmber,
-                          inactiveTrackColor: Colors.white24,
-                          thumbColor: Colors.white,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                          overlayColor: AppColors.accentAmber.withValues(alpha: 0.3),
-                          trackHeight: 3,
-                        ),
-                        child: Slider(
-                          value: _currentPage.toDouble().clamp(1.0, _totalPages.toDouble()),
-                          min: 1.0,
-                          max: _totalPages.toDouble(),
-                          divisions: _totalPages > 1 ? _totalPages - 1 : 1,
-                          onChanged: (val) {
-                            final target = val.round();
-                            if (target != _currentPage) {
-                              _pdfViewerController.jumpToPage(target);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$_totalPages',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.edit_rounded,
+                      color: Colors.white70,
+                      size: 16,
                     ),
                   ],
                 ),
               ),
+            ),
 
-            // Row 2: Page Jump indicator & Previous/Next Buttons
+            // Right: Previous (<) and Next (>) Page Navigation buttons
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Left: Page Count Indicator (tap to jump)
-                InkWell(
-                  onTap: _showJumpToPageDialog,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$_currentPage / ${_totalPages > 0 ? _totalPages : 1}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.edit_rounded, color: Colors.white70, size: 16),
-                      ],
-                    ),
+                IconButton(
+                  icon: Icon(
+                    Icons.chevron_left_rounded,
+                    color: _currentPage > 1 ? Colors.white : Colors.white38,
+                    size: 34,
                   ),
+                  tooltip: 'Previous Page',
+                  onPressed: _currentPage > 1
+                      ? () {
+                          _pdfViewerController.previousPage();
+                        }
+                      : null,
                 ),
-
-                // Right: Previous (<) and Next (>) Page Navigation buttons
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.chevron_left_rounded,
-                        color: _currentPage > 1 ? Colors.white : Colors.white38,
-                        size: 34,
-                      ),
-                      tooltip: 'Previous Page',
-                      onPressed: _currentPage > 1
-                          ? () {
-                              _pdfViewerController.previousPage();
-                            }
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.chevron_right_rounded,
-                        color: _currentPage < _totalPages
-                            ? Colors.white
-                            : Colors.white38,
-                        size: 34,
-                      ),
-                      tooltip: 'Next Page',
-                      onPressed: _currentPage < _totalPages
-                          ? () {
-                              _pdfViewerController.nextPage();
-                            }
-                          : null,
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: _currentPage < _totalPages
+                        ? Colors.white
+                        : Colors.white38,
+                    size: 34,
+                  ),
+                  tooltip: 'Next Page',
+                  onPressed: _currentPage < _totalPages
+                      ? () {
+                          _pdfViewerController.nextPage();
+                        }
+                      : null,
                 ),
               ],
             ),
@@ -919,4 +910,3 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 }
-
