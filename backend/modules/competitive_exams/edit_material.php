@@ -296,31 +296,44 @@ include __DIR__ . '/../../includes/header.php';
                             <div class="card border rounded-3 p-3 bg-light">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                     <div>
-                                        <h6 class="fw-bold mb-1 text-primary">
-                                            <i class="bi bi-link-45deg me-1"></i>Page-Wise JEE & NEET Question Links
-                                        </h6>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h6 class="fw-bold mb-0 text-primary">
+                                                <i class="bi bi-link-45deg me-1"></i>Page-Wise JEE & NEET Question Links
+                                            </h6>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" id="page_rows_badge"><?= count($savedRows) ?> Pages</span>
+                                        </div>
                                         <small class="text-muted" id="quick_fill_desc">
                                             Set specific question doc/quiz URLs for Page <span id="dyn_desc_start_page" class="fw-bold text-dark"><?= $savedStartPage ?></span> and all pages after (<span id="dyn_desc_examples" class="text-muted"><?= $savedStartPage ?>, <?= $savedStartPage + 1 ?>, <?= $savedStartPage + 2 ?>...</span>).
                                         </small>
                                     </div>
                                     <div class="d-flex flex-wrap align-items-center gap-2">
-                                        <div class="input-group input-group-sm" style="width: 150px;" title="Set starting page number">
+                                        <div class="input-group input-group-sm" style="width: 135px;" title="Set starting page number">
                                             <span class="input-group-text bg-white text-muted fw-bold">Start Pg</span>
-                                            <input type="number" min="1" max="1000" class="form-control form-control-sm fw-bold text-primary text-center" id="start_page_num" name="start_page_num" value="<?= $savedStartPage ?>" placeholder="e.g. 4" oninput="handleStartPageChange()">
+                                            <input type="number" min="1" max="5000" class="form-control form-control-sm fw-bold text-primary text-center" id="start_page_num" name="start_page_num" value="<?= $savedStartPage ?>" placeholder="e.g. 5" oninput="handleStartPageChange()">
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPageRow()">
-                                            <i class="bi bi-plus-circle me-1"></i>Add Page Link
+                                        <div class="input-group input-group-sm" style="width: 135px;" title="Set ending page number (defaults to Total Pages)">
+                                            <span class="input-group-text bg-white text-muted fw-bold">End Pg</span>
+                                            <input type="number" min="1" max="5000" class="form-control form-control-sm fw-bold text-primary text-center" id="end_page_num" value="<?= (int)($material['page_count'] ?? 0) > 0 ? (int)$material['page_count'] : '' ?>" placeholder="e.g. 322" oninput="handleStartPageChange()">
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPageRow()" title="Add single page row">
+                                            <i class="bi bi-plus-circle me-1"></i>Add Link
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_quick_fill" onclick="quickFillFromStartPage()">
+                                        <button type="button" class="btn btn-sm btn-primary text-white shadow-sm" id="btn_quick_fill" onclick="quickFillFromStartPage()" title="Generate page link rows for the exact page range">
                                             <i class="bi bi-magic me-1"></i><span id="quick_fill_btn_text">Quick Fill Page <?= $savedStartPage ?>+</span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplateUrlToAll()" title="Copy first URL to all pages">
+                                            <i class="bi bi-copy me-1"></i>Fill All URLs
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAllPageRows()" title="Remove all page link rows">
+                                            <i class="bi bi-trash3 me-1"></i>Clear
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- Table of Custom Page Links -->
-                                <div class="table-responsive bg-white rounded border">
+                                <!-- Table of Custom Page Links with Scrollable Container & Sticky Header -->
+                                <div class="table-responsive bg-white rounded border" style="max-height: 480px; overflow-y: auto;">
                                     <table class="table table-sm table-hover mb-0 align-middle">
-                                        <thead class="table-light">
+                                        <thead class="table-light sticky-top" style="position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
                                             <tr>
                                                 <th style="width: 140px;">Page Number</th>
                                                 <th>JEE & NEET Question URL / Google Doc</th>
@@ -377,18 +390,15 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <script>
-function addPageRow(pageNum = '', url = '') {
-    const tbody = document.getElementById('page_links_rows');
-    const msg = document.getElementById('no_custom_links_msg');
-    if (msg) msg.style.display = 'none';
-
+// Page Links Manager Script
+function createPageRowElement(pageNum = '', url = '') {
     const tr = document.createElement('tr');
     tr.className = 'page-link-row';
     tr.innerHTML = `
         <td>
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-light text-muted">Pg</span>
-                <input type="number" min="1" class="form-control form-control-sm row-page-num fw-bold text-primary" value="${pageNum}" placeholder="e.g. 4" oninput="syncPageLinksJson()">
+                <input type="number" min="1" class="form-control form-control-sm row-page-num fw-bold text-primary" value="${pageNum}" placeholder="e.g. 5" oninput="syncPageLinksJson()">
             </div>
         </td>
         <td>
@@ -400,8 +410,33 @@ function addPageRow(pageNum = '', url = '') {
             </button>
         </td>
     `;
+    return tr;
+}
+
+function addPageRow(pageNum = '', url = '', shouldSync = true) {
+    const tbody = document.getElementById('page_links_rows');
+    const msg = document.getElementById('no_custom_links_msg');
+    if (msg) msg.style.display = 'none';
+
+    // Auto-detect next page number if pageNum is not provided
+    if (pageNum === '') {
+        const existingNums = Array.from(document.querySelectorAll('.row-page-num'))
+            .map(inp => parseInt(inp.value, 10))
+            .filter(n => !isNaN(n));
+        if (existingNums.length > 0) {
+            pageNum = Math.max(...existingNums) + 1;
+        } else {
+            const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '1', 10);
+            pageNum = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 1;
+        }
+    }
+
+    const tr = createPageRowElement(pageNum, url);
     tbody.appendChild(tr);
-    syncPageLinksJson();
+
+    if (shouldSync) {
+        syncPageLinksJson();
+    }
 }
 
 function removePageRow(btn) {
@@ -414,14 +449,70 @@ function removePageRow(btn) {
     syncPageLinksJson();
 }
 
+function clearAllPageRows() {
+    const rows = document.querySelectorAll('.page-link-row');
+    if (rows.length === 0) return;
+    if (confirm(`Are you sure you want to delete all ${rows.length} page link rows?`)) {
+        document.getElementById('page_links_rows').innerHTML = '';
+        const msg = document.getElementById('no_custom_links_msg');
+        if (msg) msg.style.display = 'block';
+        syncPageLinksJson();
+    }
+}
+
+function applyTemplateUrlToAll() {
+    let templateDailyUrl = '';
+    const existingUrlInputs = document.querySelectorAll('.row-page-url');
+    for (const inp of existingUrlInputs) {
+        if (inp.value && inp.value.trim().length > 0) {
+            templateDailyUrl = inp.value.trim();
+            break;
+        }
+    }
+
+    if (!templateDailyUrl) {
+        const prompted = prompt('Enter the question doc/quiz URL to apply to all pages:');
+        if (prompted && prompted.trim().length > 0) {
+            templateDailyUrl = prompted.trim();
+        } else {
+            return;
+        }
+    }
+
+    let count = 0;
+    existingUrlInputs.forEach(inp => {
+        inp.value = templateDailyUrl;
+        count++;
+    });
+
+    syncPageLinksJson();
+}
+
 function handleStartPageChange() {
-    const input = document.getElementById('start_page_num');
-    const val = parseInt(input?.value || '4', 10);
-    const startPage = (!isNaN(val) && val >= 1) ? val : 4;
+    const startInput = document.getElementById('start_page_num');
+    const startVal = parseInt(startInput?.value || '1', 10);
+    const startPage = (!isNaN(startVal) && startVal >= 1) ? startVal : 1;
+
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    const totalPages = parseInt(totalPagesInput?.value || '0', 10);
+
+    const endInput = document.getElementById('end_page_num');
+    let endVal = parseInt(endInput?.value || '0', 10);
+    if ((isNaN(endVal) || endVal <= 0) && totalPages > 0) {
+        endVal = totalPages;
+        if (endInput) endInput.value = totalPages;
+    }
+
+    const endPage = (endVal >= startPage) ? endVal : (totalPages >= startPage ? totalPages : startPage);
 
     const btnText = document.getElementById('quick_fill_btn_text');
     if (btnText) {
-        btnText.textContent = `Quick Fill Page ${startPage}+`;
+        if (endPage > startPage) {
+            const pageCount = (endPage - startPage + 1);
+            btnText.textContent = `Quick Fill Pages ${startPage} to ${endPage} (${pageCount} pgs)`;
+        } else {
+            btnText.textContent = `Quick Fill Page ${startPage}+`;
+        }
     }
     const descStart = document.getElementById('dyn_desc_start_page');
     if (descStart) {
@@ -435,10 +526,37 @@ function handleStartPageChange() {
 }
 
 function quickFillFromStartPage() {
-    const totalPagesInput = document.querySelector('input[name="page_count"]');
-    const totalPages = parseInt(totalPagesInput?.value || '10', 10);
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    const totalPages = parseInt(totalPagesInput?.value || '0', 10);
+    
     const startPageInput = document.getElementById('start_page_num');
-    const startPage = Math.max(1, parseInt(startPageInput?.value || '4', 10));
+    const startPage = Math.max(1, parseInt(startPageInput?.value || '1', 10));
+
+    const endPageInput = document.getElementById('end_page_num');
+    let customEndPage = parseInt(endPageInput?.value || '0', 10);
+
+    // Determine actual endPage: prioritize customEndPage if valid, else totalPages, else fallback
+    let endPage = 0;
+    if (!isNaN(customEndPage) && customEndPage >= startPage) {
+        endPage = customEndPage;
+    } else if (!isNaN(totalPages) && totalPages >= startPage) {
+        endPage = totalPages;
+    } else if (!isNaN(totalPages) && totalPages > 0) {
+        endPage = totalPages;
+    } else {
+        endPage = startPage + 25;
+    }
+
+    if (endPage < startPage) {
+        alert(`End Page (${endPage}) must be greater than or equal to Start Page (${startPage}).`);
+        return;
+    }
+
+    if (endPage - startPage > 2000) {
+        if (!confirm(`You are about to generate ${endPage - startPage + 1} page rows. Continue?`)) {
+            return;
+        }
+    }
 
     // If an existing row has a URL, use it as template URL
     let templateDailyUrl = '';
@@ -450,41 +568,103 @@ function quickFillFromStartPage() {
         }
     }
 
-    const endPage = Math.min(Math.max(totalPages, startPage), startPage + 25);
+    // Collect all existing page numbers into a Set for O(1) fast lookup
+    const existingPages = new Set();
+    document.querySelectorAll('.row-page-num').forEach(inp => {
+        const val = parseInt(inp.value, 10);
+        if (!isNaN(val)) existingPages.add(val);
+    });
+
+    const tbody = document.getElementById('page_links_rows');
+    const fragment = document.createDocumentFragment();
+    let rowsAdded = 0;
+
     for (let p = startPage; p <= endPage; p++) {
-        const existing = Array.from(document.querySelectorAll('.row-page-num')).some(input => parseInt(input.value, 10) === p);
-        if (!existing) {
-            addPageRow(p, templateDailyUrl);
+        if (!existingPages.has(p)) {
+            fragment.appendChild(createPageRowElement(p, templateDailyUrl));
+            rowsAdded++;
         }
     }
+
+    if (rowsAdded > 0) {
+        tbody.appendChild(fragment);
+        const msg = document.getElementById('no_custom_links_msg');
+        if (msg) msg.style.display = 'none';
+    }
+
+    // Sort table rows numerically by page number
+    const rows = Array.from(tbody.querySelectorAll('.page-link-row'));
+    rows.sort((a, b) => {
+        const valA = parseInt(a.querySelector('.row-page-num')?.value || '0', 10);
+        const valB = parseInt(b.querySelector('.row-page-num')?.value || '0', 10);
+        return valA - valB;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    syncPageLinksJson();
 }
 
 function syncPageLinksJson() {
-    const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '4', 10);
-    const startPage = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 4;
+    const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '1', 10);
+    const startPage = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 1;
     const rows = document.querySelectorAll('.page-link-row');
     const mapping = {};
 
     mapping['start_page'] = startPage;
 
+    let validLinksCount = 0;
     rows.forEach(tr => {
-        const pageNum = tr.querySelector('.row-page-num').value.trim();
-        const url = tr.querySelector('.row-page-url').value.trim();
+        const pageNum = tr.querySelector('.row-page-num')?.value.trim();
+        const url = tr.querySelector('.row-page-url')?.value.trim();
         if (pageNum && url) {
             mapping[pageNum] = url;
+            validLinksCount++;
         }
     });
 
     const hiddenInput = document.getElementById('page_links');
-    if (Object.keys(mapping).length > 0) {
+    if (Object.keys(mapping).length > 1 || (Object.keys(mapping).length === 1 && mapping['start_page'])) {
         hiddenInput.value = JSON.stringify(mapping);
     } else {
         hiddenInput.value = '';
+    }
+
+    // Update row count badge
+    const badge = document.getElementById('page_rows_badge');
+    if (badge) {
+        badge.textContent = `${rows.length} Pages (${validLinksCount} with URLs)`;
     }
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Sync page_count change to End Pg
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    if (totalPagesInput) {
+        totalPagesInput.addEventListener('input', () => {
+            const endInput = document.getElementById('end_page_num');
+            const totalVal = parseInt(totalPagesInput.value || '0', 10);
+            if (endInput && (!endInput.value || parseInt(endInput.value, 10) === 0 || endInput.dataset.userEdited !== 'true')) {
+                endInput.value = totalVal > 0 ? totalVal : '';
+            }
+            handleStartPageChange();
+        });
+    }
+
+    const endPageInput = document.getElementById('end_page_num');
+    if (endPageInput) {
+        endPageInput.addEventListener('input', () => {
+            endPageInput.dataset.userEdited = 'true';
+            handleStartPageChange();
+        });
+    }
+
+    // Initialize End Pg from Total Pages if empty
+    const totalVal = parseInt(totalPagesInput?.value || '0', 10);
+    if (endPageInput && (!endPageInput.value || endPageInput.value === '0') && totalVal > 0) {
+        endPageInput.value = totalVal;
+    }
+
     const existingRows = document.querySelectorAll('.page-link-row');
     const initialVal = document.getElementById('page_links').value.trim();
     if (initialVal && initialVal.startsWith('{') && initialVal.endsWith('}')) {
@@ -495,20 +675,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!isNaN(sVal) && sVal >= 1) {
                     const input = document.getElementById('start_page_num');
                     if (input) input.value = sVal;
-                    handleStartPageChange();
                 }
             }
             if (existingRows.length === 0) {
+                const tbody = document.getElementById('page_links_rows');
+                const fragment = document.createDocumentFragment();
                 for (const [key, val] of Object.entries(parsed)) {
                     if (key && val && !isNaN(parseInt(key, 10))) {
-                        addPageRow(key, val);
+                        fragment.appendChild(createPageRowElement(key, val));
                     }
                 }
+                tbody.appendChild(fragment);
+                const msg = document.getElementById('no_custom_links_msg');
+                if (msg && tbody.children.length > 0) msg.style.display = 'none';
             }
         } catch (e) {
             console.error('Error parsing initial page_links:', e);
         }
     }
+
+    handleStartPageChange();
+    syncPageLinksJson();
 });
 </script>
 
