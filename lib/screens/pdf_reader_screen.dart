@@ -250,7 +250,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         // 2. JEE & NEET Question Link: ONLY show on pages that have a specific page link configured in Admin Panel
         final pageLinkUrl = chapter.getLinkForPage(pageNumber);
         if (isTextbookSection && pageLinkUrl != null && pageLinkUrl.trim().isNotEmpty) {
-          final targetPageUrl = pageLinkUrl.trim();
+          var targetPageUrl = pageLinkUrl.trim();
+          if (targetPageUrl.contains('docs.google.com/document/d/')) {
+            targetPageUrl = targetPageUrl.replaceAll(RegExp(r'/edit(\?[^#]*)?'), '/preview');
+          }
 
           if (targetPageUrl.trim().isNotEmpty) {
             try {

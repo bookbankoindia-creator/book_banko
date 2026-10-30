@@ -180,6 +180,8 @@ if (!empty($material['page_links'])) {
         }
     }
 }
+$savedFirstUrl = !empty($savedRows) ? reset($savedRows) : '';
+$defaultEndPage = (int)($material['page_count'] ?? 0) > 0 ? (int)$material['page_count'] : $savedStartPage;
 
 include __DIR__ . '/../../includes/header.php';
 ?>
@@ -330,6 +332,45 @@ include __DIR__ . '/../../includes/header.php';
                                     </div>
                                 </div>
 
+                                <!-- Master Google Doc Quick-Setter & Access Verifier -->
+                                <div class="card border-primary border-opacity-25 bg-white p-3 rounded-3 mb-3 shadow-sm">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-bold mb-0 text-dark small" for="master_doc_url">
+                                            <i class="bi bi-google text-danger me-1"></i>Master Google Doc / Question URL 
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Auto-Assign to All Pages</span>
+                                        </label>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle small" id="doc_clean_preview_badge" style="display:none;">
+                                            <i class="bi bi-eye me-1"></i>Auto-converted to preview mode
+                                        </span>
+                                    </div>
+
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-link-45deg"></i></span>
+                                        <input type="url" class="form-control font-monospace small" id="master_doc_url" placeholder="Paste Google Doc link: e.g. https://docs.google.com/document/d/.../edit" value="<?= htmlspecialchars($savedFirstUrl ?? '') ?>" oninput="onMasterDocInput()">
+                                        <button type="button" class="btn btn-outline-info" id="btn_verify_access" onclick="verifyMasterDocAccess()" title="Check if Google Doc is public or sends email access requests">
+                                            <i class="bi bi-shield-check me-1"></i>Check Permission
+                                        </button>
+                                        <button type="button" class="btn btn-success text-white fw-bold px-3 shadow-sm" id="btn_apply_master_doc" onclick="applyMasterDocToRange()" title="Auto-fill this link to all pages in range">
+                                            <i class="bi bi-magic me-1"></i>Auto-Set to Pages (<span id="btn_apply_range_label">Pg <?= $savedStartPage ?> to <?= !empty($defaultEndPage) ? $defaultEndPage : $savedStartPage ?></span>)
+                                        </button>
+                                    </div>
+
+                                    <!-- Live Permission Status Feedback Box -->
+                                    <div id="master_doc_status_box" style="display: none;" class="mb-2"></div>
+
+                                    <!-- Fix 'Request Access' emails guidance note -->
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top mt-1">
+                                        <div class="small text-muted">
+                                            <i class="bi bi-info-circle text-primary me-1"></i><strong>Stop "Request Access" emails:</strong> In Google Docs, click <strong>Share</strong> &rarr; change General access to <strong>"Anyone with the link"</strong> (Viewer). Links are auto-converted to <code>/preview</code> so mobile students view directly without Google sign-in.
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#bulkPasteModal">
+                                                <i class="bi bi-card-text me-1"></i>Bulk Paste List
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Table of Custom Page Links with Scrollable Container & Sticky Header -->
                                 <div class="table-responsive bg-white rounded border" style="max-height: 480px; overflow-y: auto;">
                                     <table class="table table-sm table-hover mb-0 align-middle">
@@ -370,6 +411,32 @@ include __DIR__ . '/../../includes/header.php';
 
                                 <!-- Hidden field that stores the JSON string for backend processing -->
                                 <input type="hidden" id="page_links" name="page_links" value="<?= htmlspecialchars($material['page_links'] ?? '') ?>">
+
+                                <!-- Bulk Paste Modal -->
+                                <div class="modal fade" id="bulkPasteModal" tabindex="-1" aria-labelledby="bulkPasteModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h6 class="modal-title fw-bold" id="bulkPasteModalLabel">
+                                                    <i class="bi bi-card-text text-primary me-2"></i>Bulk Paste Page Links
+                                                </h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="small text-muted mb-2">
+                                                    Paste links below. You can paste:
+                                                    <br>&bull; <strong>Line-by-line URLs:</strong> sequentially assigned starting from Start Page.
+                                                    <br>&bull; <strong>Page-specific lines:</strong> e.g. <code>5: https://...</code>, <code>Pg 6 - https://...</code>, or <code>Page 7: https://...</code>
+                                                </p>
+                                                <textarea id="bulk_paste_content" class="form-control font-monospace small" rows="8" placeholder="5: https://docs.google.com/document/d/...&#10;6: https://docs.google.com/document/d/...&#10;7: https://docs.google.com/document/d/..."></textarea>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="button" class="btn btn-primary" onclick="applyBulkPaste()">Apply Links</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -390,8 +457,327 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <script>
+// HTML Escape helper
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Convert any Google Doc URL to clean /preview mode to stop editor UI & account barriers
+function normalizeGoogleDocUrl(url) {
+    if (!url) return '';
+    const trimmed = url.trim();
+    const match = trimmed.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+        return `https://docs.google.com/document/d/${match[1]}/preview`;
+    }
+    return trimmed;
+}
+
+function onMasterDocInput() {
+    const input = document.getElementById('master_doc_url');
+    if (!input) return;
+    const rawVal = input.value.trim();
+    const clean = normalizeGoogleDocUrl(rawVal);
+    const badge = document.getElementById('doc_clean_preview_badge');
+    if (clean !== rawVal && clean.includes('/preview') && badge) {
+        badge.style.display = 'inline-block';
+    } else if (badge) {
+        badge.style.display = 'none';
+    }
+}
+
+function verifyMasterDocAccess(urlToTest = null) {
+    const input = document.getElementById('master_doc_url');
+    const url = (urlToTest || input?.value || '').trim();
+    const statusBox = document.getElementById('master_doc_status_box');
+    
+    if (!url) {
+        alert('Please enter or paste a Google Doc URL first.');
+        input?.focus();
+        return;
+    }
+
+    if (statusBox) {
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = `
+            <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <span>Testing link access and permissions...</span>
+            </div>
+        `;
+    }
+
+    fetch('../../api/verify_google_doc.php?url=' + encodeURIComponent(url))
+        .then(res => res.json())
+        .then(data => {
+            if (!statusBox) return;
+            if (data.status === 'success') {
+                if (data.is_google_doc) {
+                    if (data.is_public) {
+                        statusBox.innerHTML = `
+                            <div class="alert alert-success py-2 px-3 mb-0 small d-flex align-items-center justify-content-between">
+                                <div>
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <strong>Access OK (Public):</strong> All students can view this document directly! No email access requests will be sent to your Gmail.
+                                </div>
+                                <span class="badge bg-success">Public / Preview</span>
+                            </div>
+                        `;
+                    } else {
+                        const editUrl = data.clean_preview_url.replace('/preview', '/edit');
+                        statusBox.innerHTML = `
+                            <div class="alert alert-danger py-2 px-3 mb-0 small">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger fs-6 mt-1"></i>
+                                    <div>
+                                        <strong>Restricted Permission Detected!</strong>
+                                        <div class="mt-1">Students opening this will see <em>"You need access &rarr; Request access"</em>, sending emails to your Gmail inbox.</div>
+                                        <div class="mt-2">
+                                            <strong>Easy 3-Step Fix:</strong>
+                                            <ol class="mb-1 ps-3">
+                                                <li>Open in Google Docs: <a href="${editUrl}" target="_blank" class="fw-bold text-decoration-underline text-danger">Click here to open Document</a></li>
+                                                <li>Click the blue <strong>Share</strong> button (top-right).</li>
+                                                <li>Under <em>General access</em>, change <strong>Restricted</strong> to <strong>"Anyone with the link"</strong> (Role: Viewer), then click <strong>Done</strong>.</li>
+                                            </ol>
+                                            <div class="mt-1 text-muted">After changing, click <strong>Check Permission</strong> again to verify!</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusBox.innerHTML = `
+                        <div class="alert alert-secondary py-2 px-3 mb-0 small">
+                            <i class="bi bi-info-circle me-1"></i>Standard link configured: <code>${escapeHtml(url)}</code>
+                        </div>
+                    `;
+                }
+            } else {
+                statusBox.innerHTML = `
+                    <div class="alert alert-warning py-2 px-3 mb-0 small">
+                        <i class="bi bi-exclamation-circle me-1"></i>${escapeHtml(data.message || 'Could not verify link.')}
+                    </div>
+                `;
+            }
+        })
+        .catch(err => {
+            if (statusBox) {
+                statusBox.innerHTML = `
+                    <div class="alert alert-secondary py-2 px-3 mb-0 small">
+                        <i class="bi bi-check2 me-1"></i>Link configured.
+                    </div>
+                `;
+            }
+        });
+}
+
+function updateRangeLabels() {
+    const startInput = document.getElementById('start_page_num');
+    const startVal = parseInt(startInput?.value || '1', 10);
+    const startPage = (!isNaN(startVal) && startVal >= 1) ? startPageVal : 1;
+
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    const totalPages = parseInt(totalPagesInput?.value || '0', 10);
+
+    const endInput = document.getElementById('end_page_num');
+    let endVal = parseInt(endInput?.value || '0', 10);
+    if ((isNaN(endVal) || endVal <= 0) && totalPages > 0) {
+        endVal = totalPages;
+        if (endInput) endInput.value = totalPages;
+    }
+
+    const endPage = (endVal >= startPage) ? endVal : (totalPages >= startPage ? totalPages : startPage);
+    const count = Math.max(1, endPage - startPage + 1);
+
+    const rangeLabel = document.getElementById('btn_apply_range_label');
+    if (rangeLabel) {
+        rangeLabel.textContent = `Pg ${startPage} to ${endPage} (${count} pgs)`;
+    }
+
+    const btnText = document.getElementById('quick_fill_btn_text');
+    if (btnText) {
+        if (endPage > startPage) {
+            btnText.textContent = `Quick Fill Pages ${startPage} to ${endPage} (${count} pgs)`;
+        } else {
+            btnText.textContent = `Quick Fill Page ${startPage}+`;
+        }
+    }
+
+    const descStart = document.getElementById('dyn_desc_start_page');
+    if (descStart) descStart.textContent = startPage;
+
+    const descExamples = document.getElementById('dyn_desc_examples');
+    if (descExamples) descExamples.textContent = `${startPage}, ${startPage + 1}, ${startPage + 2}...`;
+}
+
+function applyMasterDocToRange() {
+    const masterInput = document.getElementById('master_doc_url');
+    let url = masterInput?.value?.trim() || '';
+    if (!url) {
+        alert('Please paste a Google Doc or Question link first.');
+        masterInput?.focus();
+        return;
+    }
+
+    url = normalizeGoogleDocUrl(url);
+    masterInput.value = url;
+    onMasterDocInput();
+
+    const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '1', 10);
+    const startPage = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 1;
+
+    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
+    const totalPages = parseInt(totalPagesInput?.value || '0', 10);
+
+    const endInput = document.getElementById('end_page_num');
+    let customEndPage = parseInt(endInput?.value || '0', 10);
+
+    let endPage = 0;
+    if (!isNaN(customEndPage) && customEndPage >= startPage) {
+        endPage = customEndPage;
+    } else if (!isNaN(totalPages) && totalPages >= startPage) {
+        endPage = totalPages;
+    } else if (!isNaN(totalPages) && totalPages > 0) {
+        endPage = totalPages;
+    } else {
+        endPage = startPage + 25;
+    }
+
+    if (endPage < startPage) {
+        alert(`End Page (${endPage}) cannot be less than Start Page (${startPage}).`);
+        return;
+    }
+
+    if (endPage - startPage > 2000) {
+        if (!confirm(`You are about to assign this link to ${endPage - startPage + 1} pages. Continue?`)) {
+            return;
+        }
+    }
+
+    // Map existing rows by page number
+    const rowMap = new Map();
+    document.querySelectorAll('.page-link-row').forEach(tr => {
+        const pNum = parseInt(tr.querySelector('.row-page-num')?.value || '0', 10);
+        if (pNum > 0) rowMap.set(pNum, tr);
+    });
+
+    const tbody = document.getElementById('page_links_rows');
+    const fragment = document.createDocumentFragment();
+    let updatedCount = 0;
+    let addedCount = 0;
+
+    for (let p = startPage; p <= endPage; p++) {
+        if (rowMap.has(p)) {
+            const tr = rowMap.get(p);
+            const urlInp = tr.querySelector('.row-page-url');
+            if (urlInp) {
+                urlInp.value = url;
+                updatedCount++;
+            }
+        } else {
+            fragment.appendChild(createPageRowElement(p, url));
+            addedCount++;
+        }
+    }
+
+    if (addedCount > 0) {
+        tbody.appendChild(fragment);
+        const msg = document.getElementById('no_custom_links_msg');
+        if (msg) msg.style.display = 'none';
+    }
+
+    // Sort table rows numerically
+    const rows = Array.from(tbody.querySelectorAll('.page-link-row'));
+    rows.sort((a, b) => {
+        const valA = parseInt(a.querySelector('.row-page-num')?.value || '0', 10);
+        const valB = parseInt(b.querySelector('.row-page-num')?.value || '0', 10);
+        return valA - valB;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    syncPageLinksJson();
+    verifyMasterDocAccess(url);
+}
+
+function applyBulkPaste() {
+    const textarea = document.getElementById('bulk_paste_content');
+    const content = textarea?.value?.trim() || '';
+    if (!content) {
+        alert('Please paste some links first.');
+        return;
+    }
+
+    const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const startPageVal = parseInt(document.getElementById('start_page_num')?.value || '1', 10);
+    let currentAutoPage = (!isNaN(startPageVal) && startPageVal >= 1) ? startPageVal : 1;
+
+    const rowMap = new Map();
+    document.querySelectorAll('.page-link-row').forEach(tr => {
+        const pNum = parseInt(tr.querySelector('.row-page-num')?.value || '0', 10);
+        if (pNum > 0) rowMap.set(pNum, tr);
+    });
+
+    const tbody = document.getElementById('page_links_rows');
+    const fragment = document.createDocumentFragment();
+
+    lines.forEach(line => {
+        let pageNum = null;
+        let url = line;
+
+        const prefixMatch = line.match(/^(?:page|pg)?\s*(\d+)\s*[:=\-–]\s*(https?:\/\/.+)$/i);
+        if (prefixMatch) {
+            pageNum = parseInt(prefixMatch[1], 10);
+            url = prefixMatch[2].trim();
+        } else if (/^https?:\/\//i.test(line)) {
+            pageNum = currentAutoPage++;
+            url = line.trim();
+        }
+
+        if (pageNum && url) {
+            url = normalizeGoogleDocUrl(url);
+            if (rowMap.has(pageNum)) {
+                const tr = rowMap.get(pageNum);
+                const uInp = tr.querySelector('.row-page-url');
+                if (uInp) uInp.value = url;
+            } else {
+                fragment.appendChild(createPageRowElement(pageNum, url));
+            }
+        }
+    });
+
+    if (fragment.children.length > 0) {
+        tbody.appendChild(fragment);
+        const msg = document.getElementById('no_custom_links_msg');
+        if (msg) msg.style.display = 'none';
+    }
+
+    const rows = Array.from(tbody.querySelectorAll('.page-link-row'));
+    rows.sort((a, b) => {
+        const valA = parseInt(a.querySelector('.row-page-num')?.value || '0', 10);
+        const valB = parseInt(b.querySelector('.row-page-num')?.value || '0', 10);
+        return valA - valB;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    syncPageLinksJson();
+
+    const modalEl = document.getElementById('bulkPasteModal');
+    if (modalEl && window.bootstrap) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+}
+
 // Page Links Manager Script
 function createPageRowElement(pageNum = '', url = '') {
+    const cleanUrl = normalizeGoogleDocUrl(url);
     const tr = document.createElement('tr');
     tr.className = 'page-link-row';
     tr.innerHTML = `
@@ -402,7 +788,7 @@ function createPageRowElement(pageNum = '', url = '') {
             </div>
         </td>
         <td>
-            <input type="url" class="form-control form-control-sm row-page-url font-monospace small" value="${url}" placeholder="https://docs.google.com/document/d/..." oninput="syncPageLinksJson()">
+            <input type="url" class="form-control form-control-sm row-page-url font-monospace small" value="${escapeHtml(cleanUrl)}" placeholder="https://docs.google.com/document/d/..." oninput="syncPageLinksJson()" onblur="this.value = normalizeGoogleDocUrl(this.value); syncPageLinksJson();">
         </td>
         <td class="text-center">
             <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="removePageRow(this)" title="Delete Row">
@@ -462,66 +848,44 @@ function clearAllPageRows() {
 
 function applyTemplateUrlToAll() {
     let templateDailyUrl = '';
-    const existingUrlInputs = document.querySelectorAll('.row-page-url');
-    for (const inp of existingUrlInputs) {
-        if (inp.value && inp.value.trim().length > 0) {
-            templateDailyUrl = inp.value.trim();
-            break;
+    const masterInput = document.getElementById('master_doc_url');
+    if (masterInput && masterInput.value.trim().length > 0) {
+        templateDailyUrl = normalizeGoogleDocUrl(masterInput.value.trim());
+    }
+
+    if (!templateDailyUrl) {
+        const existingUrlInputs = document.querySelectorAll('.row-page-url');
+        for (const inp of existingUrlInputs) {
+            if (inp.value && inp.value.trim().length > 0) {
+                templateDailyUrl = normalizeGoogleDocUrl(inp.value.trim());
+                break;
+            }
         }
     }
 
     if (!templateDailyUrl) {
         const prompted = prompt('Enter the question doc/quiz URL to apply to all pages:');
         if (prompted && prompted.trim().length > 0) {
-            templateDailyUrl = prompted.trim();
+            templateDailyUrl = normalizeGoogleDocUrl(prompted.trim());
         } else {
             return;
         }
     }
 
-    let count = 0;
+    const existingUrlInputs = document.querySelectorAll('.row-page-url');
     existingUrlInputs.forEach(inp => {
         inp.value = templateDailyUrl;
-        count++;
     });
+
+    if (masterInput && !masterInput.value) {
+        masterInput.value = templateDailyUrl;
+    }
 
     syncPageLinksJson();
 }
 
 function handleStartPageChange() {
-    const startInput = document.getElementById('start_page_num');
-    const startVal = parseInt(startInput?.value || '1', 10);
-    const startPage = (!isNaN(startVal) && startVal >= 1) ? startVal : 1;
-
-    const totalPagesInput = document.getElementById('page_count') || document.querySelector('input[name="page_count"]');
-    const totalPages = parseInt(totalPagesInput?.value || '0', 10);
-
-    const endInput = document.getElementById('end_page_num');
-    let endVal = parseInt(endInput?.value || '0', 10);
-    if ((isNaN(endVal) || endVal <= 0) && totalPages > 0) {
-        endVal = totalPages;
-        if (endInput) endInput.value = totalPages;
-    }
-
-    const endPage = (endVal >= startPage) ? endVal : (totalPages >= startPage ? totalPages : startPage);
-
-    const btnText = document.getElementById('quick_fill_btn_text');
-    if (btnText) {
-        if (endPage > startPage) {
-            const pageCount = (endPage - startPage + 1);
-            btnText.textContent = `Quick Fill Pages ${startPage} to ${endPage} (${pageCount} pgs)`;
-        } else {
-            btnText.textContent = `Quick Fill Page ${startPage}+`;
-        }
-    }
-    const descStart = document.getElementById('dyn_desc_start_page');
-    if (descStart) {
-        descStart.textContent = startPage;
-    }
-    const descExamples = document.getElementById('dyn_desc_examples');
-    if (descExamples) {
-        descExamples.textContent = `${startPage}, ${startPage + 1}, ${startPage + 2}...`;
-    }
+    updateRangeLabels();
     syncPageLinksJson();
 }
 
@@ -695,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     handleStartPageChange();
+    onMasterDocInput();
     syncPageLinksJson();
 });
 </script>
